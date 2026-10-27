@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
+	import { createQuery, createMutation } from '@tanstack/svelte-query';
 	import { salaryLabel, statusLabel, dateLabel } from '#lib/marketplace/types.ts';
 	import { useSession } from '#lib/auth/session.svelte.ts';
-	import { getLocalCandidateDocuments } from '#lib/candidate/storage.ts';
-	import { getLocalApplications, createApplication } from '#lib/candidate/application-store.ts';
+	import { errorMessage } from '#lib/api/client.ts';
+	import type { CandidateProfile } from '#lib/candidate/types.ts';
+	import type { Application, CreateApplication } from '#lib/candidate/applications.ts';
 	import JobContent from '#lib/components/JobContent.svelte';
 	import type { PageProps } from './$types';
 
@@ -16,23 +18,50 @@
 	let applySuccess = $state(false);
 	let applyError = $state('');
 
+	// Ambil profil kandidat dari backend API jika kandidat login
+	const profileQuery = createQuery(() => ({
+		queryKey: ['candidate', session.user?.id, 'profile'],
+		enabled: !!session.user && session.user.role === 'CANDIDATE',
+		queryFn: ({ signal }) => session.api.request<CandidateProfile>('/candidate/profile', { signal })
+	}));
+
+	// Ambil daftar lamaran saya dari backend API
+	const myAppsQuery = createQuery(() => ({
+		queryKey: ['candidate', session.user?.id, 'applications'],
+		enabled: !!session.user && session.user.role === 'CANDIDATE',
+		queryFn: ({ signal }) => session.api.request<Application[]>('/candidate/applications', { signal })
+	}));
+
 	const alreadyApplied = $derived.by(() => {
-		if (!session.user?.id && !session.user?.email) return false;
-		const all = getLocalApplications();
-		return all.some(
-			(a) =>
-				(a.candidateId === session.user?.id || a.candidateEmail === session.user?.email) &&
-				a.jobId === data.job.id
-		);
+		const apps = myAppsQuery.data || [];
+		return apps.some((a) => a.jobId === data.job.id);
 	});
 
 	const userDocs = $derived.by(() => {
-		if (!session.user?.id) return [];
-		return getLocalCandidateDocuments(session.user.id);
+		return profileQuery.data?.documents || [];
 	});
 
-	const hasResume = $derived(userDocs.some((d) => d.type === 'CV'));
-	const hasIdCard = $derived(userDocs.some((d) => d.type === 'KTP'));
+	const hasResume = $derived(userDocs.some((d) => d.type === 'CV' && d.active));
+	const hasIdCard = $derived(userDocs.some((d) => d.type === 'KTP' && d.active));
+
+	const applyMutation = createMutation(() => ({
+		mutationFn: (body: CreateApplication) =>
+			session.api.request<Application>('/candidate/applications', {
+				method: 'POST',
+				body: JSON.stringify(body)
+			}),
+		onSuccess: () => {
+			applySuccess = true;
+			setTimeout(() => {
+				showApplyModal = false;
+				applySuccess = false;
+				void goto(resolve('/(app)/(protected)/candidate/applications'));
+			}, 1800);
+		},
+		onError: (err) => {
+			applyError = errorMessage(err);
+		}
+	}));
 
 	function handleApplySubmit() {
 		applyError = '';
@@ -46,36 +75,10 @@
 			return;
 		}
 
-		const snapshots = userDocs.map((d) => ({
-			documentId: d.id,
-			documentType: d.type,
-			fileName: d.name,
-			fileSize: d.size,
-			verifiedAt: d.reviewedAt || new Date().toISOString()
-		}));
-
-		createApplication({
-			candidateId: session.user.id,
-			candidateName: session.user.name,
-			candidateEmail: session.user.email,
-			candidatePhone: '',
+		applyMutation.mutate({
 			jobId: data.job.id,
-			jobSlug: data.job.slug,
-			jobTitle: data.job.title,
-			vendorId: data.job.vendor.id,
-			vendorName: data.job.vendor.name,
-			vendorLocation: data.job.location,
-			stage: 'applied',
-			coverLetter: coverLetter.trim() || undefined,
-			documents: snapshots
+			coverLetter: coverLetter.trim() || undefined
 		});
-
-		applySuccess = true;
-		setTimeout(() => {
-			showApplyModal = false;
-			applySuccess = false;
-			void goto(resolve('/(app)/(protected)/candidate/applications'));
-		}, 1800);
 	}
 </script>
 
@@ -167,7 +170,7 @@
 
 			{#if applySuccess}
 				<div class="notice" style="background: #eef8ea; border-color: #badba7; color: var(--green); padding: 16px;">
-					<strong>Berhasil Terkirim!</strong> Mengalihkan ke dashboard lamaran Anda…
+					<strong>Berhasil Terkirim ke Backend!</strong> Mengalihkan ke dashboard lamaran Anda…
 				</div>
 			{:else}
 				{#if applyError}
@@ -221,10 +224,10 @@
 					<button class="button secondary small" onclick={() => (showApplyModal = false)}>Batal</button>
 					<button
 						class="button primary small"
-						disabled={!hasResume}
+						disabled={!hasResume || applyMutation.isPending}
 						onclick={handleApplySubmit}
 					>
-						Kirim Lamaran Sekarang ↗
+						{applyMutation.isPending ? 'Mengirim Lamaran…' : 'Kirim Lamaran Sekarang ↗'}
 					</button>
 				</div>
 			{/if}

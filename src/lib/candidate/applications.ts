@@ -1,50 +1,13 @@
-export type ApplicationStage =
-	| 'applied'
-	| 'screening_internal'
-	| 'vendor_review'
-	| 'interview'
-	| 'offered'
-	| 'hired'
-	| 'rejected'
-	| 'withdrawn';
+import type { components } from '#lib/api/schema.d.ts';
 
-export interface ApplicationDocumentSnapshot {
-	documentId: string;
-	documentType: string;
-	fileName: string;
-	fileSize: number;
-	verifiedAt: string;
-}
-
-export interface ApplicationStatusHistory {
-	id: string;
-	stage: ApplicationStage;
-	actorName: string;
-	actorRole: string;
-	notes?: string;
-	createdAt: string;
-}
-
-export interface JobApplication {
-	id: string;
-	candidateId: string;
-	candidateName: string;
-	candidateEmail: string;
-	candidatePhone: string;
-	jobId: string;
-	jobSlug: string;
-	jobTitle: string;
-	vendorId: string;
-	vendorName: string;
-	vendorLocation: string;
-	stage: ApplicationStage;
-	coverLetter?: string;
-	documents: ApplicationDocumentSnapshot[];
-	history: ApplicationStatusHistory[];
-	interviewSchedule?: string;
-	appliedAt: string;
-	updatedAt: string;
-}
+export type Application = components['schemas']['ApplicationResponse'];
+export type ApplicationPage = components['schemas']['ApplicationPageResponse'];
+export type ApplicationStage = components['schemas']['ApplicationResponse']['stage'];
+export type ApplicationTransition = components['schemas']['ApplicationTransitionDto'];
+export type CreateApplication = components['schemas']['CreateApplicationDto'];
+export type InternalNote = components['schemas']['InternalNoteResponse'];
+export type ApplicationEvent = components['schemas']['ApplicationEventResponse'];
+export type ApplicationDocumentSnapshot = components['schemas']['ApplicationDocumentSnapshotResponse'];
 
 export const applicationStageConfig: Record<
 	ApplicationStage,

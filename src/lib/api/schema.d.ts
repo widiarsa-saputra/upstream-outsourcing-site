@@ -1149,6 +1149,9 @@ export interface components {
             vendors: number;
             staff: number;
             pendingVendors: number;
+            pendingJobs: number;
+            pendingDocuments: number;
+            pendingApplications: number;
             phase: string;
             generatedAt: string;
         };

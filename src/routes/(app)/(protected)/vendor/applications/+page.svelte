@@ -2,53 +2,62 @@
 	import { resolve } from '$app/paths';
 	import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
 	import { useSession } from '#lib/auth/session.svelte.ts';
-	import { getLocalApplications, updateApplicationStage } from '#lib/candidate/application-store.ts';
+	import { errorMessage } from '#lib/api/client.ts';
+	import { downloadCandidateDocument } from '#lib/candidate/types.ts';
 	import {
 		applicationStageConfig,
-		type JobApplication,
-		type ApplicationStage
+		type Application,
+		type ApplicationPage,
+		type ApplicationStage,
+		type ApplicationTransition
 	} from '#lib/candidate/applications.ts';
 
 	const session = useSession();
 	const queryClient = useQueryClient();
 
+	let filterStage = $state<string>('all');
+	let pageNumber = $state(1);
+
 	const applicationsQuery = createQuery(() => ({
-		queryKey: ['vendor', session.user?.id, 'applications'],
+		queryKey: ['vendor', session.user?.id, 'applications', filterStage, pageNumber],
 		enabled: !!session.user?.id,
-		queryFn: async () => {
-			const all = getLocalApplications();
-			// Vendor hanya dapat melihat pelamar yang sudah masuk ke tahap minimal 'screening_internal' atau 'vendor_review'
-			return all.filter((a) => !['withdrawn'].includes(a.stage));
-		}
+		queryFn: ({ signal }) =>
+			session.api.request<ApplicationPage>(
+				`/vendor/applications?page=${pageNumber}&pageSize=20${filterStage !== 'all' ? `&stage=${filterStage}` : ''}`,
+				{ signal }
+			)
 	}));
 
-	let selectedApp = $state<JobApplication | null>(null);
+	let selectedApp = $state<Application | null>(null);
 	let transitionNotes = $state('');
 	let scheduleInput = $state('');
-	let filterStage = $state<string>('all');
 
-	const filteredApps = $derived.by(() => {
-		const list = applicationsQuery.data || [];
-		if (filterStage === 'all') return list;
-		return list.filter((a) => a.stage === filterStage);
-	});
+	const transitionMutation = createMutation(() => ({
+		mutationFn: ({ id, body }: { id: string; body: ApplicationTransition }) =>
+			session.api.request<Application>(`/vendor/applications/${id}/transitions`, {
+				method: 'POST',
+				body: JSON.stringify(body)
+			}),
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: ['vendor', session.user?.id, 'applications'] });
+			selectedApp = null;
+			transitionNotes = '';
+			scheduleInput = '';
+		}
+	}));
 
 	function handleTransition(newStage: ApplicationStage) {
 		if (!selectedApp) return;
 
-		updateApplicationStage(
-			selectedApp.id,
-			newStage,
-			session.user?.name || 'PIC Vendor',
-			'VENDOR',
-			transitionNotes.trim() || undefined,
-			newStage === 'interview' ? scheduleInput.trim() || undefined : undefined
-		);
-
-		void queryClient.invalidateQueries({ queryKey: ['vendor', session.user?.id, 'applications'] });
-		selectedApp = null;
-		transitionNotes = '';
-		scheduleInput = '';
+		transitionMutation.mutate({
+			id: selectedApp.id,
+			body: {
+				stage: newStage as any,
+				notes: transitionNotes.trim() || undefined,
+				interviewSchedule: newStage === 'interview' ? scheduleInput.trim() || undefined : undefined,
+				version: selectedApp.version
+			}
+		});
 	}
 
 	function formatDate(iso: string) {
@@ -56,16 +65,6 @@
 			day: 'numeric',
 			month: 'short',
 			year: 'numeric'
-		});
-	}
-
-	function formatDateTime(iso: string) {
-		return new Date(iso).toLocaleDateString('id-ID', {
-			day: 'numeric',
-			month: 'short',
-			year: 'numeric',
-			hour: '2-digit',
-			minute: '2-digit'
 		});
 	}
 </script>
@@ -79,7 +78,7 @@
 		<p class="eyebrow">APPLICANT TRACKING SYSTEM (ATS)</p>
 		<h1>Pelamar & <em>Kandidat Terkurasi.</em></h1>
 		<p class="lead">
-			Tinjau profil pelamar yang telah diverifikasi tim internal Upstream, jadwalkan wawancara, dan berikan penawaran kerja.
+			Tinjau profil pelamar yang telah diverifikasi tim internal Upstream, jadwalkan wawancara, dan berikan penawaran kerja langsung melalui backend.
 		</p>
 	</div>
 </div>
@@ -87,39 +86,47 @@
 <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
 	<button
 		class="button small {filterStage === 'all' ? 'primary' : 'secondary'}"
-		onclick={() => (filterStage = 'all')}
+		onclick={() => { filterStage = 'all'; pageNumber = 1; }}
 	>
-		Semua ({applicationsQuery.data?.length || 0})
+		Semua
 	</button>
 	<button
-		class="button small {filterStage === 'vendor_review' || filterStage === 'screening_internal' ? 'primary' : 'secondary'}"
-		onclick={() => (filterStage = 'screening_internal')}
+		class="button small {filterStage === 'vendor_review' ? 'primary' : 'secondary'}"
+		onclick={() => { filterStage = 'vendor_review'; pageNumber = 1; }}
 	>
-		Review Kandidat ({applicationsQuery.data?.filter((a) => ['screening_internal', 'vendor_review'].includes(a.stage)).length || 0})
+		Review Kandidat
 	</button>
 	<button
 		class="button small {filterStage === 'interview' ? 'primary' : 'secondary'}"
-		onclick={() => (filterStage = 'interview')}
+		onclick={() => { filterStage = 'interview'; pageNumber = 1; }}
 	>
-		Wawancara ({applicationsQuery.data?.filter((a) => a.stage === 'interview').length || 0})
+		Wawancara
 	</button>
 	<button
-		class="button small {filterStage === 'offered' || filterStage === 'hired' ? 'primary' : 'secondary'}"
-		onclick={() => (filterStage = 'offered')}
+		class="button small {filterStage === 'offered' ? 'primary' : 'secondary'}"
+		onclick={() => { filterStage = 'offered'; pageNumber = 1; }}
 	>
-		Tawaran / Diterima ({applicationsQuery.data?.filter((a) => ['offered', 'hired'].includes(a.stage)).length || 0})
+		Tawaran (Offer)
+	</button>
+	<button
+		class="button small {filterStage === 'hired' ? 'primary' : 'secondary'}"
+		onclick={() => { filterStage = 'hired'; pageNumber = 1; }}
+	>
+		Diterima (Hired)
 	</button>
 </div>
 
 {#if applicationsQuery.isPending}
-	<div class="notice" role="status">Memuat data pelamar…</div>
-{:else if filteredApps.length === 0}
+	<div class="notice" role="status">Memuat data pelamar dari backend API…</div>
+{:else if applicationsQuery.isError}
+	<div class="notice error" role="alert">{errorMessage(applicationsQuery.error)}</div>
+{:else if (applicationsQuery.data.items || []).length === 0}
 	<section class="panel" style="background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 32px; text-align: center;">
 		<p class="muted" style="margin: 0; font-style: italic;">Belum ada pelamar pada tahapan seleksi ini.</p>
 	</section>
 {:else}
 	<div style="display: flex; flex-direction: column; gap: 16px;">
-		{#each filteredApps as app (app.id)}
+		{#each applicationsQuery.data.items as app (app.id)}
 			{@const stage = applicationStageConfig[app.stage]}
 			<div
 				class="panel"
@@ -190,19 +197,19 @@
 				</button>
 			</div>
 
-			<!-- Berkas Terlampir -->
+			<!-- Berkas Terlampir Snapshot -->
 			<div style="background: #f8faf6; border: 1px solid var(--line); border-radius: 8px; padding: 14px; margin-bottom: 16px;">
 				<h4 style="margin: 0 0 8px; font-size: 13px; color: var(--green); text-transform: uppercase;">
 					Berkas Terverifikasi Pelamar
 				</h4>
 				<div style="display: flex; flex-direction: column; gap: 8px;">
-					{#each selectedApp.documents as doc}
+					{#each selectedApp.documents || [] as doc}
 						<div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
-							<span>📄 {doc.fileName} ({doc.documentType})</span>
+							<span>📄 {doc.name} ({doc.documentType})</span>
 							<button
 								class="text-button"
 								style="font-size: 12px;"
-								onclick={() => alert(`Mengunduh dokumen aman ${doc.fileName} dengan token capability.`)}
+								onclick={() => downloadCandidateDocument(session.api, `/vendor/applications/${selectedApp!.id}/documents/${doc.documentId}/download`, doc.name)}
 							>
 								Unduh Berkas ↗
 							</button>
@@ -211,7 +218,7 @@
 				</div>
 			</div>
 
-			<!-- Jadwal Interview Input (Opsional jika mau panggil interview) -->
+			<!-- Jadwal Interview Input -->
 			<div style="margin-bottom: 14px;">
 				<label for="sched" style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px;">
 					Jadwal & Lokasi Wawancara (Diisi jika panggil interview):
@@ -244,12 +251,14 @@
 				<button
 					class="button small"
 					style="background: #fee2e2; color: #991b1b; border: 1px solid #fecdd3;"
+					disabled={transitionMutation.isPending}
 					onclick={() => handleTransition('rejected')}
 				>
 					Tolak Lamaran
 				</button>
 				<button
 					class="button small secondary"
+					disabled={transitionMutation.isPending}
 					onclick={() => handleTransition('interview')}
 				>
 					📅 Panggil Wawancara
@@ -257,15 +266,17 @@
 				<button
 					class="button small"
 					style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;"
+					disabled={transitionMutation.isPending}
 					onclick={() => handleTransition('offered')}
 				>
 					Beri Penawaran (Offer)
 				</button>
 				<button
 					class="button primary small"
+					disabled={transitionMutation.isPending}
 					onclick={() => handleTransition('hired')}
 				>
-					✓ Terima & Salurkan (Hire)
+					{transitionMutation.isPending ? 'Memproses…' : '✓ Terima & Salurkan (Hire)'}
 				</button>
 			</div>
 		</div>
