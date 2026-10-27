@@ -42,17 +42,27 @@
 						>✓ Verifikasi dokumen</a
 					>{/if}
 				{#if session.user.permissions.includes('application.screen')}<a
+						class={['nav-link', { active: page.url.pathname.startsWith('/admin/applications') }]}
+						href={resolve('/(app)/(protected)/admin/applications')}
+						>📑 Screening lamaran</a
+					>{/if}
+				{#if session.user.permissions.includes('application.screen')}<a
 						class={['nav-link', { active: page.url.pathname.startsWith('/admin/candidates') }]}
 						href={resolve('/(app)/(protected)/admin/candidates')}
 						>👥 Direktori talenta</a
+					>{/if}
+				{#if session.user.permissions.includes('audit.read')}<a
+						class={['nav-link', { active: page.url.pathname.startsWith('/admin/audit-logs') }]}
+						href={resolve('/(app)/(protected)/admin/audit-logs')}
+						>📜 Log audit aktivitas</a
 					>{/if}
 				<a class="nav-link" href={resolve('/(app)/(protected)/account')}
 					><span>◎</span> Akun & sesi</a
 				>
 			</nav>
 			<div class="sidebar-bottom">
-				<span class="status-dot"></span> TALENT & VAULT / FASE 03
-				<p>Kurasi talenta alih daya terbaik.</p>
+				<span class="status-dot"></span> OPERASIONAL & AUDIT / FASE 05
+				<p>Transparansi & tata kelola platform.</p>
 			</div>
 		</aside>
 		<main class="workspace-main">

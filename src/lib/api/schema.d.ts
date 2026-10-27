@@ -36,6 +36,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/staff/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["AdminController_updateStaffStatus"];
+        trace?: never;
+    };
+    "/api/v1/admin/audit-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AdminController_auditLogs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health": {
         parameters: {
             query?: never;
@@ -1140,6 +1172,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["NotificationController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/{id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["NotificationController_markAsRead"];
+        trace?: never;
+    };
+    "/api/v1/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["NotificationController_markAllAsRead"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1160,6 +1240,34 @@ export interface components {
             name: string;
             /** @enum {string} */
             role: "SUPERADMIN" | "TALENT_ACQUISITION" | "LEGAL";
+        };
+        UpdateStaffStatusDto: {
+            /** @enum {string} */
+            status: "ACTIVE" | "DISABLED";
+        };
+        StaffResponse: {
+            id: string;
+            name: string;
+            email: string;
+            /** @enum {string} */
+            role: "SUPERADMIN" | "TALENT_ACQUISITION" | "LEGAL";
+            /** @enum {string} */
+            status: "ACTIVE" | "DISABLED";
+        };
+        AuditLogItemResponse: {
+            id: string;
+            actorId?: string | null;
+            actorName?: string | null;
+            action: string;
+            targetId?: string | null;
+            createdAt: string;
+        };
+        AuditLogPageResponse: {
+            items: components["schemas"]["AuditLogItemResponse"][];
+            total: number;
+            page: number;
+            pageSize: number;
+            totalPages: number;
         };
         RegisterDto: {
             email: string;
@@ -1676,6 +1784,24 @@ export interface components {
         CreateNoteDto: {
             notes: string;
         };
+        NotificationResponse: {
+            id: string;
+            title: string;
+            message: string;
+            type: string;
+            link: string;
+            read: boolean;
+            readAt?: string | null;
+            createdAt: string;
+        };
+        NotificationPageResponse: {
+            items: components["schemas"]["NotificationResponse"][];
+            unreadCount: number;
+            total: number;
+            page: number;
+            pageSize: number;
+            totalPages: number;
+        };
     };
     responses: never;
     parameters: never;
@@ -1739,6 +1865,56 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    AdminController_updateStaffStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateStaffStatusDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffResponse"];
+                };
+            };
+        };
+    };
+    AdminController_auditLogs: {
+        parameters: {
+            query?: {
+                action?: string;
+                actorId?: string;
+                targetId?: string;
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditLogPageResponse"];
+                };
             };
         };
     };
@@ -3439,6 +3615,69 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    NotificationController_list: {
+        parameters: {
+            query?: {
+                unreadOnly?: boolean;
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPageResponse"];
+                };
+            };
+        };
+    };
+    NotificationController_markAsRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationResponse"];
+                };
+            };
+        };
+    };
+    NotificationController_markAllAsRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
             };
         };
     };
