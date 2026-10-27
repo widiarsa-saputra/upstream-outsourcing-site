@@ -443,13 +443,24 @@
 						<span class="company-monogram" style="width: 38px; height: 38px; border-radius: 8px; background: #e7eddf; color: var(--green); font-weight: 700; display: grid; place-items: center; font-size: 14px;">
 							{job.vendor.name.slice(0, 2).toUpperCase()}
 						</span>
-						<div style="display: flex; gap: 6px;">
+						<div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
 							<span class="job-type" style="font-size: 11px; padding: 3px 8px; border-radius: 4px; background: #f3f5ee; color: var(--green); font-weight: 600;">
 								{statusLabel[job.employmentType] || job.employmentType}
 							</span>
 							<span class="job-type" style="font-size: 11px; padding: 3px 8px; border-radius: 4px; background: #eef2eb; color: #496347; font-weight: 600;">
 								{statusLabel[job.workMode] || job.workMode}
 							</span>
+							{#if session.user && session.user.role === 'CANDIDATE'}
+								{#if isApplied}
+									<span style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: #dcfce7; color: #166534; border: 1px solid #86efac; display: inline-flex; align-items: center; gap: 4px;">
+										✓ DONE
+									</span>
+								{:else}
+									<span style="font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 999px; background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0;">
+										Belum
+									</span>
+								{/if}
+							{/if}
 						</div>
 					</div>
 
