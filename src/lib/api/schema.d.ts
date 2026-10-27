@@ -1220,6 +1220,91 @@ export interface paths {
         patch: operations["NotificationController_markAllAsRead"];
         trace?: never;
     };
+    "/api/v1/candidate/attendances/clock-in": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Clock in for today's work */
+        post: operations["CandidateAttendanceController_clockIn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/candidate/attendances/{id}/clock-out": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Clock out for the current attendance record */
+        post: operations["CandidateAttendanceController_clockOut"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/candidate/attendances/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get candidate's attendance history and summary */
+        get: operations["CandidateAttendanceController_getMyAttendances"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vendor/attendances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get attendances of hired candidates for vendor's jobs */
+        get: operations["VendorAttendanceController_getVendorAttendances"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vendor/attendances/{id}/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Verify or dispute a candidate's attendance record */
+        patch: operations["VendorAttendanceController_verifyAttendance"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1801,6 +1886,70 @@ export interface components {
             page: number;
             pageSize: number;
             totalPages: number;
+        };
+        ClockInDto: {
+            /** @description Application ID for active hired job */
+            applicationId: string;
+            /** @description Latitude of clock-in location */
+            latitude?: number;
+            /** @description Longitude of clock-in location */
+            longitude?: number;
+            /** @description Proof image URL or upload key */
+            proofUrl?: string;
+            /** @description Notes or comments for clock-in */
+            notes?: string;
+        };
+        AttendanceRecordResponse: {
+            id: string;
+            applicationId: string;
+            jobTitle: string;
+            vendorName: string;
+            candidateName: string;
+            date: string;
+            clockInTime?: Record<string, never>;
+            clockInLatitude?: Record<string, never>;
+            clockInLongitude?: Record<string, never>;
+            clockInProofUrl?: Record<string, never>;
+            clockInNotes: string;
+            clockOutTime?: Record<string, never>;
+            clockOutLatitude?: Record<string, never>;
+            clockOutLongitude?: Record<string, never>;
+            clockOutProofUrl?: Record<string, never>;
+            clockOutNotes: string;
+            workMinutes: number;
+            /** @enum {string} */
+            status: "present" | "late" | "absent" | "leave" | "sick";
+            /** @enum {string} */
+            verificationStatus: "pending" | "verified" | "disputed" | "rejected";
+            verifiedAt?: Record<string, never>;
+            verifiedBy?: Record<string, never>;
+            disputeReason: string;
+            createdAt: string;
+            updatedAt: string;
+        };
+        ClockOutDto: {
+            /** @description Latitude of clock-out location */
+            latitude?: number;
+            /** @description Longitude of clock-out location */
+            longitude?: number;
+            /** @description Proof image URL or upload key */
+            proofUrl?: string;
+            /** @description Notes or work summary for clock-out */
+            notes?: string;
+        };
+        VerifyAttendanceDto: {
+            /**
+             * @description Verification decision by vendor/supervisor
+             * @enum {string}
+             */
+            decision: "pending" | "verified" | "disputed" | "rejected";
+            /** @description Reason or notes when disputed/rejected or verified */
+            reason?: string;
+            /**
+             * @description Adjusted attendance status if necessary
+             * @enum {string}
+             */
+            status?: "present" | "late" | "absent" | "leave" | "sick";
         };
     };
     responses: never;
@@ -3677,6 +3826,135 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+        };
+    };
+    CandidateAttendanceController_clockIn: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClockInDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceRecordResponse"];
+                };
+            };
+        };
+    };
+    CandidateAttendanceController_clockOut: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClockOutDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceRecordResponse"];
+                };
+            };
+        };
+    };
+    CandidateAttendanceController_getMyAttendances: {
+        parameters: {
+            query?: {
+                /** @description Application ID filter */
+                applicationId?: string;
+                /** @description Filter by start date YYYY-MM-DD */
+                startDate?: string;
+                /** @description Filter by end date YYYY-MM-DD */
+                endDate?: string;
+                /** @description Filter by status */
+                status?: "present" | "late" | "absent" | "leave" | "sick";
+                /** @description Filter by verification status */
+                verificationStatus?: "pending" | "verified" | "disputed" | "rejected";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    VendorAttendanceController_getVendorAttendances: {
+        parameters: {
+            query?: {
+                /** @description Application ID filter */
+                applicationId?: string;
+                /** @description Filter by start date YYYY-MM-DD */
+                startDate?: string;
+                /** @description Filter by end date YYYY-MM-DD */
+                endDate?: string;
+                /** @description Filter by status */
+                status?: "present" | "late" | "absent" | "leave" | "sick";
+                /** @description Filter by verification status */
+                verificationStatus?: "pending" | "verified" | "disputed" | "rejected";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    VendorAttendanceController_verifyAttendance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyAttendanceDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceRecordResponse"];
                 };
             };
         };

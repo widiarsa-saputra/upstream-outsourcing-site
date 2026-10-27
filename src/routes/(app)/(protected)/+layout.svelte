@@ -9,8 +9,10 @@
 	$effect(() => {
 		if (session.status === 'anonymous') {
 			const isStaffArea = page.url.pathname.startsWith('/admin');
-			const targetLogin = isStaffArea ? '/(app)/admin/login' : '/(app)/login';
-			void goto(resolve(`${targetLogin}?returnTo=${encodeURIComponent(page.url.pathname)}`), {
+			const targetPath = isStaffArea
+				? resolve('/(app)/admin/login')
+				: resolve('/(app)/login');
+			void goto(`${targetPath}?returnTo=${encodeURIComponent(page.url.pathname)}`, {
 				replaceState: true
 			});
 		}

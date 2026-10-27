@@ -55,8 +55,9 @@ export class AuthSession {
 			}
 		} catch (error) {
 			if (epoch !== this.epoch) return;
-			if (error instanceof ApiError && error.status === 401) this.reset();
-			else {
+			if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+				this.reset();
+			} else {
 				this.status = 'error';
 				this.error = 'Sesi belum dapat diperiksa. Pastikan API tersedia, lalu coba kembali.';
 			}
