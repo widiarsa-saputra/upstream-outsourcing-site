@@ -48,6 +48,13 @@
 					<span>▤</span> Document Vault
 				</a>
 				<a
+					class={['nav-link', { active: page.url.pathname.startsWith('/candidate/applications') }]}
+					href={resolve('/(app)/(protected)/candidate/applications')}
+					aria-current={page.url.pathname.startsWith('/candidate/applications') ? 'page' : undefined}
+				>
+					<span>📑</span> Lamaran Saya
+				</a>
+				<a
 					class="nav-link"
 					href={resolve('/(public)/jobs')}
 				>

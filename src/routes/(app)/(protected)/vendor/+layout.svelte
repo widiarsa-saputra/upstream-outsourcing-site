@@ -31,14 +31,19 @@
 					href={resolve('/(app)/(protected)/vendor/jobs')}
 					aria-current={page.url.pathname.startsWith('/vendor/jobs') ? 'page' : undefined}
 					>◫ Lowongan saya</a
+				><a
+					class={['nav-link', { active: page.url.pathname.startsWith('/vendor/applications') }]}
+					href={resolve('/(app)/(protected)/vendor/applications')}
+					aria-current={page.url.pathname.startsWith('/vendor/applications') ? 'page' : undefined}
+					>👥 Pelamar & ATS</a
 				><a class="nav-link" href={resolve('/(app)/(protected)/account')}>Akun & sesi</a><a
 					class="nav-link"
 					href={resolve('/(public)/jobs')}>Portal lowongan ↗</a
 				>
 			</nav>
 			<div class="sidebar-bottom">
-				<span class="status-dot"></span> PARTNERSHIP / FASE 02
-				<p>Tim hebat dimulai di sini.</p>
+				<span class="status-dot"></span> PARTNERSHIP & ATS / FASE 04
+				<p>Kurasi & rekrut kandidat terbaik.</p>
 			</div>
 		</aside>
 		<main class="workspace-main">
