@@ -77,5 +77,11 @@
 			onclick={() => google.mutate()}>Lanjutkan dengan Google</button
 		>{/if}
 	{#if google.isError}<p class="notice error" role="alert">{errorMessage(google.error)}</p>{/if}
-	<p class="form-footer">Belum punya akun? <a href={resolve('/(app)/register')}>Buat akun →</a></p>
+	<p class="form-footer">
+		Belum punya akun? <a href={resolve('/(app)/register')}>Buat akun kandidat / vendor →</a>
+		<br />
+		<small style="margin-top: 10px; display: inline-block;">
+			Staf internal Upstream? <a href={resolve('/(app)/admin/login')} style="color: var(--green); font-weight: 600;">Masuk di Portal Admin ↗</a>
+		</small>
+	</p>
 </AuthFrame>

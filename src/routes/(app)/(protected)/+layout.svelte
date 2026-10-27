@@ -7,10 +7,13 @@
 	let { children }: LayoutProps = $props();
 	const session = useSession();
 	$effect(() => {
-		if (session.status === 'anonymous')
-			void goto(resolve(`/(app)/login?returnTo=${encodeURIComponent(page.url.pathname)}`), {
+		if (session.status === 'anonymous') {
+			const isStaffArea = page.url.pathname.startsWith('/admin');
+			const targetLogin = isStaffArea ? '/(app)/admin/login' : '/(app)/login';
+			void goto(resolve(`${targetLogin}?returnTo=${encodeURIComponent(page.url.pathname)}`), {
 				replaceState: true
 			});
+		}
 	});
 </script>
 
