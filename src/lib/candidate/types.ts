@@ -1,112 +1,140 @@
-export interface CandidateBio {
-	headline: string;
-	phone: string;
-	location: string;
-	bio: string;
-	linkedinUrl?: string;
-	portfolioUrl?: string;
-}
+import type { components } from '#lib/api/schema.d.ts';
+import type { ApiClient } from '#lib/api/client.ts';
 
-export interface WorkExperience {
-	id: string;
-	company: string;
-	position: string;
-	location?: string;
-	startDate: string; // YYYY-MM
-	endDate?: string;   // YYYY-MM or null if current
-	isCurrent: boolean;
-	description: string;
-}
+export type CandidateProfile = components['schemas']['CandidateProfileResponse'];
+export type CandidateProfileDto = components['schemas']['CandidateProfileDto'];
+export type Experience = components['schemas']['ExperienceResponse'];
+export type ExperienceInput = components['schemas']['ExperienceInputDto'];
+export type Education = components['schemas']['EducationResponse'];
+export type EducationInput = components['schemas']['EducationInputDto'];
+export type Skill = components['schemas']['SkillResponse'];
+export type SkillInput = components['schemas']['SkillInputDto'];
+export type CandidateDocument = components['schemas']['CandidateDocumentResponse'];
+export type CandidateDocumentType = components['schemas']['CandidateUploadIntentDto']['type'];
+export type CandidateUploadIntent = components['schemas']['UploadIntentResponse'];
 
-export interface Education {
-	id: string;
-	institution: string;
-	degree: string;
-	fieldOfStudy: string;
-	startDate: string; // YYYY
-	endDate?: string;   // YYYY
-	grade?: string;
-}
+export type CandidateItem = components['schemas']['CandidateItemResponse'];
+export type CandidatePage = components['schemas']['CandidatePageResponse'];
+export type CandidateDocumentItem = components['schemas']['CandidateDocumentItemWithCandidateResponse'];
+export type CandidateDocumentPage = components['schemas']['CandidateDocumentPageResponse'];
+export type CandidateDocumentReview = components['schemas']['CandidateDocumentReviewDto'];
 
-export interface SkillItem {
-	id: string;
-	name: string;
-	level: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPERT';
-}
-
-export interface CandidateProfile {
-	userId: string;
-	headline: string;
-	phone: string;
-	location: string;
-	bio: string;
-	linkedinUrl: string;
-	portfolioUrl: string;
-	experiences: WorkExperience[];
-	educations: Education[];
-	skills: SkillItem[];
-	updatedAt: string;
-}
-
-export type DocumentType = 'RESUME' | 'ID_CARD' | 'DIPLOMA' | 'TRANSCRIPT' | 'CERTIFICATE' | 'SKCK' | 'OTHER';
-
-export type DocumentStatus = 'draft' | 'pending_review' | 'verified' | 'revision_required' | 'rejected';
-
-export interface CandidateDocument {
-	id: string;
-	type: DocumentType;
-	title: string;
-	fileName: string;
-	fileSize: number;
-	mimeType: string;
-	status: DocumentStatus;
-	reviewNotes?: string;
-	uploadedAt: string;
-	verifiedAt?: string;
-}
-
-export const documentTypeLabels: Record<DocumentType, { label: string; description: string; required: boolean }> = {
-	RESUME: {
+export const candidateDocumentLabels: Record<
+	CandidateDocumentType,
+	{ label: string; description: string; required: boolean }
+> = {
+	CV: {
 		label: 'Curriculum Vitae (CV) / Resume',
-		description: 'Format PDF wajib, terbaru maksimal 5 MB.',
+		description: 'Format PDF atau dokumen resmi keahlian maksimal 5 MB.',
 		required: true
 	},
-	ID_CARD: {
+	KTP: {
 		label: 'Kartu Tanda Penduduk (KTP)',
-		description: 'Scan/foto jelas berformat JPG, PNG, atau PDF.',
+		description: 'Scan/foto identitas jelas (JPG, PNG, atau PDF).',
 		required: true
 	},
 	DIPLOMA: {
 		label: 'Ijazah Terakhir',
-		description: 'Bukti kelulusan pendidikan formal.',
+		description: 'Bukti kelulusan pendidikan formal terakhir.',
 		required: true
 	},
 	TRANSCRIPT: {
-		label: 'Transkrip Nilai',
-		description: 'Transkrip akademik resmi.',
+		label: 'Transkrip Nilai Akademik',
+		description: 'Transkrip nilai resmi sekolah / universitas.',
 		required: false
 	},
 	SKCK: {
-		label: 'SKCK (Surat Keterangan Catatan Kepolisian)',
-		description: 'Diperlukan untuk formasi alih daya tertentu.',
+		label: 'SKCK (Kepolisian)',
+		description: 'Surat catatan kepolisian aktif untuk formasi alih daya khusus.',
 		required: false
 	},
 	CERTIFICATE: {
-		label: 'Sertifikat Keahlian / Pelatihan',
-		description: 'Sertifikasi kompetensi atau lisensi profesional.',
+		label: 'Sertifikasi Profesi / Pelatihan',
+		description: 'Sertifikat keahlian teknis atau lisensi resmi.',
 		required: false
 	},
-	OTHER: {
-		label: 'Dokumen Tambahan',
-		description: 'Portofolio kerja, surat referensi, dll.',
+	PORTFOLIO: {
+		label: 'Portofolio Karya',
+		description: 'Bukti hasil karya atau dokumentasi proyek.',
 		required: false
 	}
 };
 
-export const documentStatusConfig: Record<DocumentStatus, { label: string; tone: 'neutral' | 'pending' | 'success' | 'warning' | 'danger' }> = {
-	draft: { label: 'Draft', tone: 'neutral' },
-	pending_review: { label: 'Menunggu verifikasi', tone: 'pending' },
+export const candidateDocumentStatusConfig: Record<
+	string,
+	{ label: string; tone: 'neutral' | 'pending' | 'success' | 'warning' | 'danger' }
+> = {
+	pending: { label: 'Menunggu review', tone: 'pending' },
 	verified: { label: 'Terverifikasi', tone: 'success' },
 	revision_required: { label: 'Perlu revisi', tone: 'warning' },
 	rejected: { label: 'Ditolak', tone: 'danger' }
 };
+
+export async function uploadCandidateDocument(
+	api: ApiClient,
+	type: CandidateDocumentType,
+	file: File
+): Promise<CandidateDocument> {
+	if (
+		file.size > 5242880 ||
+		file.size < 1 ||
+		!['application/pdf', 'image/jpeg', 'image/png'].includes(file.type)
+	) {
+		throw new Error('Pilih PDF, JPG, atau PNG dengan ukuran maksimal 5 MB.');
+	}
+
+	const intent = await api.request<CandidateUploadIntent>(
+		'/candidate/documents/upload-intents',
+		{
+			method: 'POST',
+			body: JSON.stringify({
+				type,
+				name: file.name,
+				mimeType: file.type,
+				size: file.size
+			})
+		}
+	);
+
+	if (intent.uploadUrl) {
+		const result = await fetch(intent.uploadUrl, {
+			method: 'PUT',
+			headers: intent.headers,
+			body: file,
+			credentials: 'omit',
+			signal: AbortSignal.timeout(60000)
+		});
+		if (!result.ok) {
+			throw new Error('Unggah ke storage gagal. Periksa koneksi dan coba kembali.');
+		}
+	} else {
+		await api.request(intent.uploadPath, {
+			method: 'PUT',
+			anonymous: true,
+			headers: intent.headers,
+			body: file,
+			timeoutMs: 60000
+		});
+	}
+
+	return api.request<CandidateDocument>(
+		'/candidate/documents/' + intent.id + '/complete',
+		{ method: 'POST' }
+	);
+}
+
+export async function downloadCandidateDocument(
+	api: ApiClient,
+	path: string,
+	name: string
+): Promise<void> {
+	const blob = await api.request<Blob>(path, { responseType: 'blob' });
+	const url = URL.createObjectURL(blob);
+	const a = document.createElement('a');
+	a.href = url;
+	a.download = name;
+	document.body.append(a);
+	a.click();
+	a.remove();
+	setTimeout(() => URL.revokeObjectURL(url), 1000);
+}

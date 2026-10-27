@@ -948,6 +948,198 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/candidate/applications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CandidateApplicationController_myApplications"];
+        put?: never;
+        post: operations["CandidateApplicationController_apply"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/candidate/applications/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CandidateApplicationController_detail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/candidate/applications/{id}/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CandidateApplicationController_withdraw"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/candidate/applications/{id}/documents/{docId}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CandidateApplicationController_downloadDoc"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vendor/applications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["VendorApplicationController_applications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vendor/applications/{id}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["VendorApplicationController_transition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vendor/applications/{id}/documents/{docId}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["VendorApplicationController_downloadDoc"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/applications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AdminApplicationController_applications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/applications/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AdminApplicationController_detail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/applications/{id}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AdminApplicationController_transition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/applications/{id}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AdminApplicationController_addNote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/applications/{id}/documents/{docId}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AdminApplicationController_downloadDoc"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1411,6 +1603,75 @@ export interface components {
             /** @enum {string} */
             decision: "verified" | "revision_required" | "rejected";
             reason?: string;
+        };
+        CreateApplicationDto: {
+            jobId: string;
+            coverLetter?: string;
+        };
+        ApplicationDocumentSnapshotResponse: {
+            documentId: string;
+            documentType: string;
+            name: string;
+            mimeType: string;
+            size: number;
+            sha256?: string | null;
+            verifiedAt?: string | null;
+            createdAt: string;
+        };
+        ApplicationEventResponse: {
+            id: string;
+            /** @enum {string} */
+            stage: "applied" | "screening_internal" | "vendor_review" | "interview" | "offered" | "hired" | "rejected" | "withdrawn";
+            actorName: string;
+            actorRole: string;
+            notes: string;
+            createdAt: string;
+        };
+        InternalNoteResponse: {
+            id: string;
+            actorName: string;
+            notes: string;
+            createdAt: string;
+        };
+        ApplicationResponse: {
+            id: string;
+            jobId: string;
+            jobTitle: string;
+            jobSlug: string;
+            vendorId: string;
+            vendorName: string;
+            vendorLocation: string;
+            candidateId: string;
+            candidateName: string;
+            candidateEmail: string;
+            candidatePhone: string;
+            /** @enum {string} */
+            stage: "applied" | "screening_internal" | "vendor_review" | "interview" | "offered" | "hired" | "rejected" | "withdrawn";
+            coverLetter: string;
+            interviewSchedule?: string | null;
+            version: number;
+            appliedAt: string;
+            updatedAt: string;
+            documents: components["schemas"]["ApplicationDocumentSnapshotResponse"][];
+            events: components["schemas"]["ApplicationEventResponse"][];
+            notes?: components["schemas"]["InternalNoteResponse"][];
+        };
+        ApplicationPageResponse: {
+            items: components["schemas"]["ApplicationResponse"][];
+            total: number;
+            page: number;
+            pageSize: number;
+            totalPages: number;
+        };
+        ApplicationTransitionDto: {
+            /** @enum {string} */
+            stage: "screening_internal" | "vendor_review" | "interview" | "offered" | "hired" | "rejected" | "withdrawn";
+            notes?: string;
+            interviewSchedule?: string;
+            version?: number;
+        };
+        CreateNoteDto: {
+            notes: string;
         };
     };
     responses: never;
@@ -2873,6 +3134,298 @@ export interface operations {
             path: {
                 candidateId: string;
                 id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CandidateApplicationController_myApplications: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationResponse"][];
+                };
+            };
+        };
+    };
+    CandidateApplicationController_apply: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateApplicationDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationResponse"];
+                };
+            };
+        };
+    };
+    CandidateApplicationController_detail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationResponse"];
+                };
+            };
+        };
+    };
+    CandidateApplicationController_withdraw: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationResponse"];
+                };
+            };
+        };
+    };
+    CandidateApplicationController_downloadDoc: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                docId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    VendorApplicationController_applications: {
+        parameters: {
+            query?: {
+                q?: string;
+                jobId?: string;
+                vendorId?: string;
+                stage?: "applied" | "screening_internal" | "vendor_review" | "interview" | "offered" | "hired" | "rejected" | "withdrawn";
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationPageResponse"];
+                };
+            };
+        };
+    };
+    VendorApplicationController_transition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplicationTransitionDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationResponse"];
+                };
+            };
+        };
+    };
+    VendorApplicationController_downloadDoc: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                docId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminApplicationController_applications: {
+        parameters: {
+            query?: {
+                q?: string;
+                jobId?: string;
+                vendorId?: string;
+                stage?: "applied" | "screening_internal" | "vendor_review" | "interview" | "offered" | "hired" | "rejected" | "withdrawn";
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationPageResponse"];
+                };
+            };
+        };
+    };
+    AdminApplicationController_detail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationResponse"];
+                };
+            };
+        };
+    };
+    AdminApplicationController_transition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplicationTransitionDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationResponse"];
+                };
+            };
+        };
+    };
+    AdminApplicationController_addNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateNoteDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InternalNoteResponse"];
+                };
+            };
+        };
+    };
+    AdminApplicationController_downloadDoc: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                docId: string;
             };
             cookie?: never;
         };

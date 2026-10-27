@@ -3,91 +3,61 @@
 	import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
 	import { useSession } from '#lib/auth/session.svelte.ts';
 	import { errorMessage } from '#lib/api/client.ts';
-	import { documentTypeLabels, type DocumentStatus } from '#lib/candidate/types.ts';
+	import {
+		candidateDocumentLabels,
+		downloadCandidateDocument,
+		type CandidateDocumentPage,
+		type CandidateDocumentItem,
+		type CandidateDocumentReview
+	} from '#lib/candidate/types.ts';
 
 	const session = useSession();
 	const queryClient = useQueryClient();
 	const allowed = $derived(!!session.user?.permissions.includes('document.verify'));
 
-	// Mock dokumen untuk antrean admin verifikasi
-	interface ReviewItem {
-		id: string;
-		candidateId: string;
-		candidateName: string;
-		candidateEmail: string;
-		documentType: string;
-		fileName: string;
-		fileSize: number;
-		status: DocumentStatus;
-		uploadedAt: string;
-		reviewNotes?: string;
-	}
+	let filterStatus = $state<string>('pending');
+	let pageNumber = $state(1);
 
-	const initialReviews: ReviewItem[] = [
-		{
-			id: 'doc-rev-101',
-			candidateId: 'cand-1',
-			candidateName: 'Budi Santoso',
-			candidateEmail: 'budi.santoso@example.com',
-			documentType: 'ID_CARD',
-			fileName: 'ktp_budi_santoso.jpg',
-			fileSize: 1420000,
-			status: 'pending_review',
-			uploadedAt: new Date(Date.now() - 3600000 * 3).toISOString()
-		},
-		{
-			id: 'doc-rev-102',
-			candidateId: 'cand-2',
-			candidateName: 'Siti Rahmawati',
-			candidateEmail: 'siti.rahma@example.com',
-			documentType: 'RESUME',
-			fileName: 'cv_siti_rahmawati_2026.pdf',
-			fileSize: 850000,
-			status: 'pending_review',
-			uploadedAt: new Date(Date.now() - 3600000 * 5).toISOString()
-		},
-		{
-			id: 'doc-rev-103',
-			candidateId: 'cand-3',
-			candidateName: 'Made Aryawan',
-			candidateEmail: 'made.aryawan@example.com',
-			documentType: 'DIPLOMA',
-			fileName: 'ijazah_s1_teknik_aryawan.pdf',
-			fileSize: 2100000,
-			status: 'pending_review',
-			uploadedAt: new Date(Date.now() - 3600000 * 8).toISOString()
+	const documentsQuery = createQuery(() => ({
+		queryKey: ['admin', session.user?.id, 'candidate-documents', filterStatus, pageNumber],
+		enabled: allowed,
+		queryFn: ({ signal }) =>
+			session.api.request<CandidateDocumentPage>(
+				`/admin/candidate-documents?page=${pageNumber}&pageSize=20${filterStatus !== 'all' ? `&verificationStatus=${filterStatus}` : ''}`,
+				{ signal }
+			)
+	}));
+
+	let selectedDoc = $state<CandidateDocumentItem | null>(null);
+	let reviewReason = $state('');
+
+	const reviewMutation = createMutation(() => ({
+		mutationFn: ({ id, body }: { id: string; body: CandidateDocumentReview }) =>
+			session.api.request(`/admin/candidate-documents/${id}/reviews`, {
+				method: 'POST',
+				body: JSON.stringify(body)
+			}),
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: ['admin', session.user?.id, 'candidate-documents'] });
+			selectedDoc = null;
+			reviewReason = '';
 		}
-	];
+	}));
 
-	let reviewItems = $state<ReviewItem[]>(initialReviews);
-	let selectedDoc = $state<ReviewItem | null>(null);
-	let reviewNotes = $state('');
-	let filterStatus = $state<string>('pending_review');
-
-	const filteredDocs = $derived.by(() => {
-		if (filterStatus === 'all') return reviewItems;
-		return reviewItems.filter((d) => d.status === filterStatus);
-	});
-
-	function openDecision(doc: ReviewItem) {
+	function openDecision(doc: CandidateDocumentItem) {
 		selectedDoc = doc;
-		reviewNotes = doc.reviewNotes || '';
+		reviewReason = doc.reviewReason || '';
 	}
 
-	function submitDecision(newStatus: 'verified' | 'revision_required' | 'rejected') {
+	function submitDecision(decision: 'verified' | 'revision_required' | 'rejected') {
 		if (!selectedDoc) return;
-		reviewItems = reviewItems.map((item) => {
-			if (item.id === selectedDoc!.id) {
-				return {
-					...item,
-					status: newStatus,
-					reviewNotes: reviewNotes.trim() || undefined
-				};
+		reviewMutation.mutate({
+			id: selectedDoc.id,
+			body: {
+				decision,
+				reason: reviewReason.trim()
 			}
-			return item;
 		});
-		selectedDoc = null;
-		reviewNotes = '';
 	}
 
 	function formatBytes(bytes: number) {
@@ -118,7 +88,7 @@
 		<p class="eyebrow">TALENT ACQUISITION & COMPLIANCE</p>
 		<h1>Verifikasi <em>Dokumen Kandidat.</em></h1>
 		<p class="lead">
-			Periksa keaslian KTP, Ijazah, dan CV kandidat sebelum diteruskan ke kurasi seleksi mitra vendor alih daya.
+			Periksa keaslian KTP, Ijazah, dan CV kandidat langsung dari storage backend sebelum diteruskan ke kurasi seleksi mitra vendor alih daya.
 		</p>
 	</div>
 </div>
@@ -131,37 +101,41 @@
 	<div style="display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;">
 		<span class="muted" style="font-weight: 600;">Filter Status:</span>
 		<button
-			class="button small {filterStatus === 'pending_review' ? 'primary' : 'secondary'}"
-			onclick={() => (filterStatus = 'pending_review')}
+			class="button small {filterStatus === 'pending' ? 'primary' : 'secondary'}"
+			onclick={() => { filterStatus = 'pending'; pageNumber = 1; }}
 		>
-			Menunggu Verifikasi ({reviewItems.filter((d) => d.status === 'pending_review').length})
+			Menunggu Verifikasi
 		</button>
 		<button
 			class="button small {filterStatus === 'verified' ? 'primary' : 'secondary'}"
-			onclick={() => (filterStatus = 'verified')}
+			onclick={() => { filterStatus = 'verified'; pageNumber = 1; }}
 		>
-			Terverifikasi ({reviewItems.filter((d) => d.status === 'verified').length})
+			Terverifikasi
 		</button>
 		<button
 			class="button small {filterStatus === 'revision_required' ? 'primary' : 'secondary'}"
-			onclick={() => (filterStatus = 'revision_required')}
+			onclick={() => { filterStatus = 'revision_required'; pageNumber = 1; }}
 		>
-			Perlu Revisi ({reviewItems.filter((d) => d.status === 'revision_required').length})
+			Perlu Revisi
 		</button>
 		<button
 			class="button small {filterStatus === 'all' ? 'primary' : 'secondary'}"
-			onclick={() => (filterStatus = 'all')}
+			onclick={() => { filterStatus = 'all'; pageNumber = 1; }}
 		>
-			Semua ({reviewItems.length})
+			Semua
 		</button>
 	</div>
 
-	<section class="panel" style="background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 20px;">
-		{#if filteredDocs.length === 0}
-			<p class="muted" style="padding: 24px 0; text-align: center; font-style: italic;">
-				Tidak ada dokumen dalam status ini.
-			</p>
-		{:else}
+	{#if documentsQuery.isPending}
+		<div class="notice" role="status">Memuat data antrean verifikasi dari backend API…</div>
+	{:else if documentsQuery.isError}
+		<div class="notice error" role="alert">{errorMessage(documentsQuery.error)}</div>
+	{:else if (documentsQuery.data.items || []).length === 0}
+		<section class="panel" style="background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 32px; text-align: center;">
+			<p class="muted" style="margin: 0; font-style: italic;">Tidak ada dokumen dalam status ini.</p>
+		</section>
+	{:else}
+		<section class="panel" style="background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 20px;">
 			<div class="table-scroll">
 				<table>
 					<thead>
@@ -175,8 +149,8 @@
 						</tr>
 					</thead>
 					<tbody>
-						{#each filteredDocs as item (item.id)}
-							{@const docConf = documentTypeLabels[item.documentType as keyof typeof documentTypeLabels]}
+						{#each documentsQuery.data.items as item (item.id)}
+							{@const docConf = candidateDocumentLabels[item.type]}
 							<tr>
 								<td>
 									<strong>{item.candidateName}</strong>
@@ -184,29 +158,29 @@
 									<small class="muted">{item.candidateEmail}</small>
 								</td>
 								<td>
-									<strong>{docConf?.label || item.documentType}</strong>
+									<strong>{docConf?.label || item.type}</strong>
 								</td>
 								<td>
-									<span>{item.fileName}</span>
+									<span>{item.name}</span>
 									<br />
-									<small class="muted">{formatBytes(item.fileSize)}</small>
+									<small class="muted">{formatBytes(item.size)}</small>
 								</td>
 								<td>
-									<small>{formatDate(item.uploadedAt)}</small>
+									<small>{formatDate(item.createdAt)}</small>
 								</td>
 								<td>
 									<span
 										style="display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px;
-										{item.status === 'verified' ? 'background: #dcfce7; color: #166534;' : ''}
-										{item.status === 'pending_review' ? 'background: #fef9c3; color: #854d0e;' : ''}
-										{item.status === 'revision_required' ? 'background: #fee2e2; color: #991b1b;' : ''}
-										{item.status === 'rejected' ? 'background: #f1f5f9; color: #475569;' : ''}"
+										{item.verificationStatus === 'verified' ? 'background: #dcfce7; color: #166534;' : ''}
+										{item.verificationStatus === 'pending' ? 'background: #fef9c3; color: #854d0e;' : ''}
+										{item.verificationStatus === 'revision_required' ? 'background: #fee2e2; color: #991b1b;' : ''}
+										{item.verificationStatus === 'rejected' ? 'background: #f1f5f9; color: #475569;' : ''}"
 									>
-										{item.status === 'verified'
+										{item.verificationStatus === 'verified'
 											? 'Terverifikasi'
-											: item.status === 'pending_review'
+											: item.verificationStatus === 'pending'
 												? 'Menunggu review'
-												: item.status === 'revision_required'
+												: item.verificationStatus === 'revision_required'
 													? 'Perlu revisi'
 													: 'Ditolak'}
 									</span>
@@ -221,11 +195,11 @@
 					</tbody>
 				</table>
 			</div>
-		{/if}
-	</section>
+		</section>
+	{/if}
 {/if}
 
-<!-- Modal Periksa & Putusan Dokumen -->
+<!-- Modal Periksa & Putusan Dokumen dari Backend -->
 {#if selectedDoc}
 	<div
 		style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: grid; place-items: center; z-index: 100; padding: 16px;"
@@ -235,7 +209,7 @@
 				<div>
 					<span class="eyebrow" style="margin-bottom: 4px;">REVIEW KEABSAHAN DOKUMEN</span>
 					<h3 style="margin: 0; color: var(--green);">{selectedDoc.candidateName}</h3>
-					<p class="muted" style="margin: 2px 0 0; font-size: 13px;">{selectedDoc.fileName} ({formatBytes(selectedDoc.fileSize)})</p>
+					<p class="muted" style="margin: 2px 0 0; font-size: 13px;">{selectedDoc.name} ({formatBytes(selectedDoc.size)})</p>
 				</div>
 				<button
 					onclick={() => (selectedDoc = null)}
@@ -247,32 +221,28 @@
 
 			<div style="background: #f8faf6; border: 1px solid var(--line); border-radius: 8px; padding: 14px; margin-bottom: 16px;">
 				<div style="display: flex; justify-content: space-between; align-items: center;">
-					<span style="font-weight: 600; font-size: 14px; color: var(--green);">Pratinjau Dokumen Bertanda Tangan:</span>
-					<a
+					<span style="font-weight: 600; font-size: 14px; color: var(--green);">Unduh Dokumen Asli Backend:</span>
+					<button
 						class="button secondary small"
-						href="#preview"
-						onclick={(e) => {
-							e.preventDefault();
-							alert('Membuka file aman ' + selectedDoc!.fileName + ' dengan presigned URL.');
-						}}
+						onclick={() => downloadCandidateDocument(session.api, `/admin/candidates/${selectedDoc!.candidateId}/documents/${selectedDoc!.id}/download`, selectedDoc!.name)}
 					>
 						Unduh / Lihat File ↗
-					</a>
+					</button>
 				</div>
 				<p class="muted" style="font-size: 12px; margin: 8px 0 0;">
-					File ini diunduh secara terenkripsi menggunakan ephemeral bearer token (masa berlaku 60 detik).
+					File ini diunduh secara terenkripsi menggunakan ephemeral bearer token melalui storage service backend.
 				</p>
 			</div>
 
 			<div style="margin-bottom: 20px;">
-				<label for="review-notes" style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 14px;">
+				<label for="review-reason" style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 14px;">
 					Catatan Verifikasi (Wajib diisi jika minta revisi / ditolak):
 				</label>
 				<textarea
-					id="review-notes"
+					id="review-reason"
 					rows="3"
-					placeholder="Tuliskan alasan revisi, misalnya: Foto KTP buram dan terpotong, mohon unggah ulang dengan pencahayaan terang..."
-					bind:value={reviewNotes}
+					placeholder="Tuliskan catatan perbaikan atau alasan penolakan..."
+					bind:value={reviewReason}
 					style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 8px; font-family: inherit; font-size: 14px;"
 				></textarea>
 			</div>
@@ -282,6 +252,7 @@
 				<button
 					class="button small"
 					style="background: #fee2e2; color: #991b1b; border: 1px solid #fecdd3;"
+					disabled={reviewMutation.isPending}
 					onclick={() => submitDecision('revision_required')}
 				>
 					Minta Revisi
@@ -289,9 +260,10 @@
 				<button
 					class="button primary small"
 					style="background: var(--green); color: white;"
+					disabled={reviewMutation.isPending}
 					onclick={() => submitDecision('verified')}
 				>
-					Verifikasi & Loloskan (Approve)
+					{reviewMutation.isPending ? 'Menyimpan…' : 'Verifikasi & Loloskan (Approve)'}
 				</button>
 			</div>
 		</div>

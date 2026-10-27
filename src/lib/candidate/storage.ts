@@ -41,16 +41,22 @@ export function saveLocalCandidateDocuments(userId: string, docs: CandidateDocum
 
 function createDefaultProfile(userId: string): CandidateProfile {
 	return {
+		id: crypto.randomUUID(),
 		userId,
+		email: '',
+		name: '',
 		headline: '',
 		phone: '',
 		location: '',
+		address: '',
+		gender: '',
 		bio: '',
-		linkedinUrl: '',
-		portfolioUrl: '',
+		version: 1,
 		experiences: [],
 		educations: [],
 		skills: [],
+		documents: [],
+		createdAt: new Date().toISOString(),
 		updatedAt: new Date().toISOString()
 	};
 }

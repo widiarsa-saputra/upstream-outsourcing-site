@@ -1,98 +1,61 @@
 <script lang="ts">
 	import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
 	import { useSession } from '#lib/auth/session.svelte.ts';
-	import { getLocalCandidateDocuments, saveLocalCandidateDocuments } from '#lib/candidate/storage.ts';
+	import { errorMessage } from '#lib/api/client.ts';
 	import {
-		documentTypeLabels,
-		documentStatusConfig,
-		type CandidateDocument,
-		type DocumentType
+		candidateDocumentLabels,
+		candidateDocumentStatusConfig,
+		uploadCandidateDocument,
+		downloadCandidateDocument,
+		type CandidateProfile,
+		type CandidateDocumentType
 	} from '#lib/candidate/types.ts';
 
 	const session = useSession();
 	const queryClient = useQueryClient();
 
-	const documentsQuery = createQuery(() => ({
-		queryKey: ['candidate', session.user?.id, 'documents'],
+	const profileQuery = createQuery(() => ({
+		queryKey: ['candidate', session.user?.id, 'profile'],
 		enabled: !!session.user?.id,
-		queryFn: async () => {
-			return getLocalCandidateDocuments(session.user!.id);
-		}
+		queryFn: ({ signal }) => session.api.request<CandidateProfile>('/candidate/profile', { signal })
 	}));
 
-	let activeUploadType = $state<DocumentType | null>(null);
+	let activeUploadType = $state<CandidateDocumentType | null>(null);
 	let uploadError = $state('');
 	let uploadSuccessMessage = $state('');
 	let isUploading = $state(false);
 
-	const saveDocumentsMutation = createMutation(() => ({
-		mutationFn: async (docs: CandidateDocument[]) => {
-			saveLocalCandidateDocuments(session.user!.id, docs);
-			return docs;
-		},
-		onSuccess: (saved) => {
-			queryClient.setQueryData(['candidate', session.user?.id, 'documents'], saved);
-			uploadSuccessMessage = 'Berkas berhasil diunggah dan masuk ke antrean verifikasi staf internal!';
-			setTimeout(() => {
-				uploadSuccessMessage = '';
-			}, 4000);
+	const deleteDocMutation = createMutation(() => ({
+		mutationFn: (id: string) =>
+			session.api.request('/candidate/documents/' + id, { method: 'DELETE' }),
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: ['candidate', session.user?.id, 'profile'] });
 		}
 	}));
 
-	function handleFileSelect(e: Event, type: DocumentType) {
+	async function handleFileSelect(e: Event, type: CandidateDocumentType) {
 		const target = e.target as HTMLInputElement;
 		const file = target.files?.[0];
 		if (!file) return;
 
 		uploadError = '';
 		activeUploadType = type;
-
-		// 1. Validasi Ukuran (Maks 5MB)
-		if (file.size > 5 * 1024 * 1024) {
-			uploadError = `Ukuran berkas (${(file.size / (1024 * 1024)).toFixed(1)} MB) melebihi batas maksimal 5 MB.`;
-			target.value = '';
-			return;
-		}
-
-		// 2. Validasi Tipe MIME
-		const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
-		if (!allowedTypes.includes(file.type)) {
-			uploadError = 'Format berkas tidak didukung. Harap unggah berkas PDF, JPG, atau PNG.';
-			target.value = '';
-			return;
-		}
-
 		isUploading = true;
 
-		// Simulasi proses upload & kalkulasi hash
-		setTimeout(() => {
-			const currentDocs = documentsQuery.data || [];
-			const existingIndex = currentDocs.findIndex((d) => d.type === type);
-
-			const newDoc: CandidateDocument = {
-				id: crypto.randomUUID(),
-				type,
-				title: documentTypeLabels[type].label,
-				fileName: file.name,
-				fileSize: file.size,
-				mimeType: file.type,
-				status: 'pending_review',
-				uploadedAt: new Date().toISOString()
-			};
-
-			let updated: CandidateDocument[];
-			if (existingIndex >= 0) {
-				updated = [...currentDocs];
-				updated[existingIndex] = newDoc;
-			} else {
-				updated = [...currentDocs, newDoc];
-			}
-
+		try {
+			await uploadCandidateDocument(session.api, type, file);
+			uploadSuccessMessage = `Berkas ${file.name} berhasil diunggah ke storage aman dan masuk antrean verifikasi!`;
+			await queryClient.invalidateQueries({ queryKey: ['candidate', session.user?.id, 'profile'] });
+			setTimeout(() => {
+				uploadSuccessMessage = '';
+			}, 4000);
+		} catch (err: any) {
+			uploadError = err.message || 'Gagal mengunggah berkas. Periksa koneksi dan coba kembali.';
+		} finally {
 			isUploading = false;
 			activeUploadType = null;
 			target.value = '';
-			saveDocumentsMutation.mutate(updated);
-		}, 800);
+		}
 	}
 
 	function formatBytes(bytes: number) {
@@ -121,7 +84,7 @@
 		<p class="eyebrow">DOCUMENT VAULT & VERIFICATION</p>
 		<h1>Brankas <em>Dokumen.</em></h1>
 		<p class="lead">
-			Unggah dan kelola berkas wajib identitas dan kualifikasi kerja Anda. Seluruh berkas disimpan aman dan dienkripsi.
+			Unggah dan kelola berkas wajib identitas dan kualifikasi kerja Anda. Seluruh berkas disimpan aman dan dienkripsi di cloud storage backend.
 		</p>
 	</div>
 </div>
@@ -145,60 +108,91 @@
 	</p>
 </div>
 
-<div style="display: flex; flex-direction: column; gap: 16px;">
-	{#each Object.entries(documentTypeLabels) as [typeKey, config]}
-		{@const type = typeKey as DocumentType}
-		{@const existing = (documentsQuery.data || []).find((d) => d.type === type)}
-		{@const status = existing?.status || 'draft'}
-		{@const statusInfo = documentStatusConfig[status]}
+{#if profileQuery.isPending}
+	<div class="notice" role="status">Memuat data dokumen vault…</div>
+{:else if profileQuery.isError}
+	<div class="notice error" role="alert">{errorMessage(profileQuery.error)}</div>
+{:else}
+	<div style="display: flex; flex-direction: column; gap: 16px;">
+		{#each Object.entries(candidateDocumentLabels) as [typeKey, config]}
+			{@const type = typeKey as CandidateDocumentType}
+			{@const existing = (profileQuery.data?.documents || []).find((d) => d.type === type && d.active)}
+			{@const status = existing?.verificationStatus || 'pending'}
+			{@const statusInfo = candidateDocumentStatusConfig[status] || candidateDocumentStatusConfig.pending}
 
-		<div
-			class="panel"
-			style="background: var(--paper); border: 1px solid {existing ? 'var(--line)' : '#e5ebd9'}; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 12px;"
-		>
-			<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap;">
-				<div>
-					<div style="display: flex; align-items: center; gap: 8px;">
-						<h2 style="font-size: 1.15rem; margin: 0; color: var(--green);">{config.label}</h2>
-						{#if config.required}
-							<span style="font-size: 10px; font-weight: 700; color: #b91c1c; background: #fee2e2; padding: 2px 6px; border-radius: 4px;">
-								WAJIB
+			<div
+				class="panel"
+				style="background: var(--paper); border: 1px solid {existing ? 'var(--line)' : '#e5ebd9'}; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 12px;"
+			>
+				<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap;">
+					<div>
+						<div style="display: flex; align-items: center; gap: 8px;">
+							<h2 style="font-size: 1.15rem; margin: 0; color: var(--green);">{config.label}</h2>
+							{#if config.required}
+								<span style="font-size: 10px; font-weight: 700; color: #b91c1c; background: #fee2e2; padding: 2px 6px; border-radius: 4px;">
+									WAJIB
+								</span>
+							{/if}
+						</div>
+						<p class="muted" style="font-size: 13px; margin: 4px 0 0;">{config.description}</p>
+					</div>
+
+					<div style="display: flex; align-items: center; gap: 10px;">
+						{#if existing}
+							<span
+								style="display: inline-block; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px;
+								{status === 'verified' ? 'background: #dcfce7; color: #166534;' : ''}
+								{status === 'pending' ? 'background: #fef9c3; color: #854d0e;' : ''}
+								{status === 'revision_required' ? 'background: #fee2e2; color: #991b1b;' : ''}
+								{status === 'rejected' ? 'background: #fee2e2; color: #991b1b;' : ''}"
+							>
+								{statusInfo.label}
+							</span>
+						{:else}
+							<span style="font-size: 12px; color: var(--muted); background: #f4f6f1; padding: 4px 10px; border-radius: 999px;">
+								Belum diunggah
 							</span>
 						{/if}
 					</div>
-					<p class="muted" style="font-size: 13px; margin: 4px 0 0;">{config.description}</p>
 				</div>
 
-				<div style="display: flex; align-items: center; gap: 10px;">
-					{#if existing}
-						<span
-							style="display: inline-block; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px;
-							{status === 'verified' ? 'background: #dcfce7; color: #166534;' : ''}
-							{status === 'pending_review' ? 'background: #fef9c3; color: #854d0e;' : ''}
-							{status === 'revision_required' ? 'background: #fee2e2; color: #991b1b;' : ''}
-							{status === 'draft' ? 'background: #f1f5f9; color: #475569;' : ''}"
-						>
-							{statusInfo.label}
-						</span>
-					{:else}
-						<span style="font-size: 12px; color: var(--muted); background: #f4f6f1; padding: 4px 10px; border-radius: 999px;">
-							Belum diunggah
-						</span>
-					{/if}
-				</div>
-			</div>
-
-			{#if existing}
-				<div style="background: #fafbf9; padding: 12px 16px; border-radius: 8px; border: 1px dashed var(--line); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-					<div>
-						<p style="margin: 0; font-weight: 600; font-size: 14px; color: var(--ink);">{existing.fileName}</p>
-						<span class="muted" style="font-size: 12px;">
-							{formatBytes(existing.fileSize)} • Diunggah pada {formatDate(existing.uploadedAt)}
-						</span>
+				{#if existing}
+					<div style="background: #fafbf9; padding: 12px 16px; border-radius: 8px; border: 1px dashed var(--line); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+						<div>
+							<p style="margin: 0; font-weight: 600; font-size: 14px; color: var(--ink);">{existing.name}</p>
+							<span class="muted" style="font-size: 12px;">
+								{formatBytes(existing.size)} • Diunggah pada {formatDate(existing.createdAt)}
+							</span>
+						</div>
+						<div style="display: flex; gap: 8px;">
+							<button
+								class="button secondary small"
+								onclick={() => downloadCandidateDocument(session.api, `/candidate/documents/${existing.id}/download`, existing.name)}
+							>
+								Unduh ↗
+							</button>
+							<label class="button secondary small" style="cursor: pointer; margin: 0;">
+								{isUploading && activeUploadType === type ? 'Mengunggah…' : 'Ganti'}
+								<input
+									type="file"
+									accept=".pdf,.jpg,.jpeg,.png"
+									disabled={isUploading}
+									onchange={(e) => handleFileSelect(e, type)}
+									style="display: none;"
+								/>
+							</label>
+						</div>
 					</div>
-					<div style="display: flex; gap: 8px;">
-						<label class="button secondary small" style="cursor: pointer; margin: 0;">
-							{isUploading && activeUploadType === type ? 'Mengunggah…' : 'Ganti Berkas'}
+
+					{#if existing.reviewReason}
+						<div style="background: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; padding: 12px; font-size: 13px; color: #9f1239;">
+							<strong>Catatan Petugas:</strong> {existing.reviewReason}
+						</div>
+					{/if}
+				{:else}
+					<div style="display: flex; align-items: center; gap: 12px; margin-top: 4px;">
+						<label class="button primary small" style="cursor: pointer; margin: 0;">
+							{isUploading && activeUploadType === type ? 'Mengunggah…' : '+ Unggah Dokumen'}
 							<input
 								type="file"
 								accept=".pdf,.jpg,.jpeg,.png"
@@ -207,29 +201,10 @@
 								style="display: none;"
 							/>
 						</label>
-					</div>
-				</div>
-
-				{#if existing.reviewNotes}
-					<div style="background: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; padding: 12px; font-size: 13px; color: #9f1239;">
-						<strong>Catatan Petugas:</strong> {existing.reviewNotes}
+						<span class="muted" style="font-size: 12px;">Format didukung: PDF, JPG, PNG (Maks 5 MB)</span>
 					</div>
 				{/if}
-			{:else}
-				<div style="display: flex; align-items: center; gap: 12px; margin-top: 4px;">
-					<label class="button primary small" style="cursor: pointer; margin: 0;">
-						{isUploading && activeUploadType === type ? 'Mengunggah…' : '+ Unggah Dokumen'}
-						<input
-							type="file"
-							accept=".pdf,.jpg,.jpeg,.png"
-							disabled={isUploading}
-							onchange={(e) => handleFileSelect(e, type)}
-							style="display: none;"
-						/>
-					</label>
-					<span class="muted" style="font-size: 12px;">Format didukung: PDF, JPG, PNG (Maks 5 MB)</span>
-				</div>
-			{/if}
-		</div>
-	{/each}
-</div>
+			</div>
+		{/each}
+	</div>
+{/if}

@@ -31,8 +31,8 @@
 		return getLocalCandidateDocuments(session.user.id);
 	});
 
-	const hasResume = $derived(userDocs.some((d) => d.type === 'RESUME'));
-	const hasIdCard = $derived(userDocs.some((d) => d.type === 'ID_CARD'));
+	const hasResume = $derived(userDocs.some((d) => d.type === 'CV'));
+	const hasIdCard = $derived(userDocs.some((d) => d.type === 'KTP'));
 
 	function handleApplySubmit() {
 		applyError = '';
@@ -49,9 +49,9 @@
 		const snapshots = userDocs.map((d) => ({
 			documentId: d.id,
 			documentType: d.type,
-			fileName: d.fileName,
-			fileSize: d.fileSize,
-			verifiedAt: d.verifiedAt || new Date().toISOString()
+			fileName: d.name,
+			fileSize: d.size,
+			verifiedAt: d.reviewedAt || new Date().toISOString()
 		}));
 
 		createApplication({
