@@ -396,7 +396,9 @@ form input::placeholder {
 .workspace {
 	display: grid;
 	grid-template-columns: 240px minmax(0, 1fr);
-	min-height: 100svh;
+	height: 100vh;
+	height: 100dvh;
+	overflow: hidden;
 }
 .sidebar {
 	background: #edf0e6;
@@ -404,6 +406,11 @@ form input::placeholder {
 	padding: 30px 22px;
 	display: flex;
 	flex-direction: column;
+	height: 100%;
+	overflow-y: auto;
+	scrollbar-width: thin;
+	position: sticky;
+	top: 0;
 }
 .sidebar .brand {
 	font-size: 23px;
@@ -457,8 +464,16 @@ form input::placeholder {
 	border-radius: 50%;
 	margin-right: 6px;
 }
+.workspace-main {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	height: 100%;
+	overflow: hidden;
+}
 .workspace-header {
 	height: 92px;
+	flex-shrink: 0;
 	background: #fff;
 	border-bottom: 1px solid var(--line);
 	display: flex;
@@ -466,6 +481,9 @@ form input::placeholder {
 	align-items: center;
 	padding: 0 40px;
 	gap: 15px;
+	position: sticky;
+	top: 0;
+	z-index: 10;
 }
 .breadcrumb {
 	font-size: 11px;
@@ -503,9 +521,15 @@ form input::placeholder {
 	font-size: 10px;
 }
 .workspace-content {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	overflow-x: hidden;
+	scrollbar-width: thin;
 	padding: 48px 40px;
 	max-width: 1500px;
 	margin: 0 auto;
+	width: 100%;
 }
 .page-heading {
 	display: flex;
@@ -803,6 +827,13 @@ td:nth-child(2) {
 	}
 	.workspace {
 		display: block;
+		height: auto;
+		min-height: 100svh;
+		overflow: visible;
+	}
+	.workspace-main {
+		height: auto;
+		overflow: visible;
 	}
 	.sidebar {
 		padding: 15px 20px;
@@ -810,6 +841,9 @@ td:nth-child(2) {
 		align-items: center;
 		justify-content: space-between;
 		border-bottom: 1px solid var(--line);
+		position: static;
+		height: auto;
+		overflow: visible;
 	}
 	.sidebar .brand {
 		font-size: 19px;
