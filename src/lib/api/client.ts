@@ -1,6 +1,10 @@
 import { PUBLIC_API_URL } from '$app/env/public';
-export const TOKEN_KEY = 'upstream.access_token';
-export const LOGOUT_KEY = 'upstream.logout';
+export const USER_TOKEN_KEY = 'upstream.user_token';
+export const USER_LOGOUT_KEY = 'upstream.user_logout';
+export const ADMIN_TOKEN_KEY = 'upstream.admin_token';
+export const ADMIN_LOGOUT_KEY = 'upstream.admin_logout';
+export const TOKEN_KEY = USER_TOKEN_KEY;
+export const LOGOUT_KEY = USER_LOGOUT_KEY;
 import type { components } from './schema';
 export type TokenResponse = components['schemas']['TokenResponse'];
 export class ApiError extends Error {
@@ -25,17 +29,19 @@ export class ApiClient {
 	onExpired = () => {};
 	constructor(
 		private readonly storage: Storage,
-		private readonly fetcher: typeof fetch = fetch
+		private readonly fetcher: typeof fetch = fetch,
+		public readonly tokenKey: string = USER_TOKEN_KEY,
+		public readonly logoutKey: string = USER_LOGOUT_KEY
 	) {}
 	get token() {
-		return this.storage.getItem(TOKEN_KEY);
+		return this.storage.getItem(this.tokenKey);
 	}
 	setToken(token: string) {
-		this.storage.setItem(TOKEN_KEY, token);
+		this.storage.setItem(this.tokenKey, token);
 	}
 	clear() {
 		this.generation++;
-		this.storage.removeItem(TOKEN_KEY);
+		this.storage.removeItem(this.tokenKey);
 	}
 	async request<T>(path: string, options: Options = {}): Promise<T> {
 		const generation = this.generation;

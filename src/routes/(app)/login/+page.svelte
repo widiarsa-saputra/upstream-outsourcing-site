@@ -7,7 +7,7 @@
 	import { useSession, safeDestination } from '#lib/auth/session.svelte.ts';
 	import { errorMessage } from '#lib/api/client.ts';
 
-	const session = useSession();
+	const session = useSession('user');
 	let email = $state('');
 	let password = $state('');
 
@@ -37,10 +37,15 @@
 	}));
 
 	$effect(() => {
-		if (session.status === 'authenticated' && session.user)
-			void goto(safeDestination(page.url.searchParams.get('returnTo'), session.user), {
-				replaceState: true
-			});
+		if (session.status === 'authenticated' && session.user) {
+			const isAdmin = ['SUPERADMIN', 'TALENT_ACQUISITION', 'LEGAL'].includes(session.user.role);
+			if (isAdmin) {
+				void session.logout();
+				return;
+			}
+			const target = safeDestination(page.url.searchParams.get('returnTo'), session.user);
+			void goto(target, { replaceState: true });
+		}
 	});
 </script>
 
@@ -195,11 +200,4 @@
 			</div>
 		</div>
 	{/if}
-
-	<p style="text-align: center; margin-top: 18px; font-size: 11px; color: var(--muted);">
-		Staf internal Upstream?
-		<a href={resolve('/(app)/admin/login')} style="color: var(--green); font-weight: 600; margin-left: 4px;">
-			Masuk di Portal Admin ↗
-		</a>
-	</p>
 </AuthFrame>

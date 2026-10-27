@@ -3,33 +3,28 @@
 	import { page } from '$app/state';
 	import { useSession } from '#lib/auth/session.svelte.ts';
 
-	const session = useSession();
+	// Header publik hanya menggunakan sesi user (kandidat & penyelenggara)
+	const session = useSession('user');
 
 	const isCandidate = $derived(session.user?.role === 'CANDIDATE');
 	const isVendor = $derived(session.user?.role === 'VENDOR');
-	const isAdmin = $derived(
-		['SUPERADMIN', 'TALENT_ACQUISITION', 'LEGAL'].includes(session.user?.role || '')
-	);
 
 	const portalHref = $derived.by(() => {
 		if (isCandidate) return resolve('/(app)/(protected)/candidate');
 		if (isVendor) return resolve('/(app)/(protected)/vendor');
-		if (isAdmin) return resolve('/(app)/(protected)/admin');
 		return resolve('/(app)/login');
 	});
 
 	const portalLabel = $derived.by(() => {
 		if (isCandidate) return 'Portal Pelamar';
 		if (isVendor) return 'Portal Penyelenggara';
-		if (isAdmin) return 'Konsol Admin';
 		return 'Portal Saya';
 	});
 
 	const roleBadgeLabel = $derived.by(() => {
 		if (isCandidate) return 'Pelamar';
 		if (isVendor) return 'Penyelenggara';
-		if (isAdmin) return 'Admin';
-		return session.user?.role || '';
+		return 'User';
 	});
 </script>
 
@@ -57,7 +52,7 @@
 		</a>
 	</nav>
 
-	<!-- Akses & Status User Login -->
+	<!-- Akses & Status User Login: Ganti 2 Tombol Masuk/Daftar menjadi Sesi User saat login -->
 	<div class="header-auth" style="display: flex; align-items: center; gap: 12px; margin-left: auto;">
 		{#if session.status === 'authenticated' && session.user}
 			<div class="user-chip" style="display: flex; align-items: center; gap: 8px;">
@@ -68,7 +63,7 @@
 					{session.user.name.charAt(0).toUpperCase()}
 				</span>
 				<div style="display: flex; flex-direction: column; line-height: 1.15;">
-					<span style="font-size: 12px; font-weight: 600; color: var(--ink); max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+					<span style="font-size: 12px; font-weight: 600; color: var(--ink); max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
 						{session.user.name}
 					</span>
 					<span style="font-size: 9px; color: var(--green); font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;">

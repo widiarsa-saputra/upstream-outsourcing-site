@@ -6,13 +6,17 @@
 	import { useSession } from '#lib/auth/session.svelte.ts';
 	import { errorMessage } from '#lib/api/client.ts';
 	import type { CandidateProfile } from '#lib/candidate/types.ts';
-	import type { Application, CreateApplication } from '#lib/candidate/applications.ts';
+	import {
+		applicationStageConfig,
+		type Application,
+		type CreateApplication
+	} from '#lib/candidate/applications.ts';
 	import PublicHeader from '#lib/components/PublicHeader.svelte';
 	import PublicFooter from '#lib/components/PublicFooter.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
-	const session = useSession();
+	const session = useSession('user');
 
 	// State modal lamaran & otentikasi
 	let selectedJob = $state<PublicJob | null>(null);
@@ -45,8 +49,10 @@
 		return profileQuery.data?.documents || [];
 	});
 
-	const hasResume = $derived(userDocs.some((d) => d.type === 'CV' && d.active));
-	const hasIdCard = $derived(userDocs.some((d) => d.type === 'KTP' && d.active));
+	const resumeDoc = $derived(userDocs.find((d) => d.type === 'CV' && d.active));
+	const idDoc = $derived(userDocs.find((d) => d.type === 'KTP' && d.active));
+	const hasResume = $derived(Boolean(resumeDoc));
+	const hasIdCard = $derived(Boolean(idDoc));
 
 	// Mutasi pengajuan lamaran
 	const applyMutation = createMutation(() => ({
@@ -144,7 +150,10 @@
 				Untuk Mitra Penyelenggara →
 			</a>
 		{:else if session.user.role === 'CANDIDATE'}
-			<a class="button secondary" href={resolve('/(app)/(protected)/candidate')}>Buka Portal Pelamar ↗</a>
+			<a class="button secondary" href="#user-dashboard">Lihat Dashboard Saya ↓</a>
+			<a class="text-link" href={resolve('/(app)/(protected)/candidate')} style="font-size: 13px; font-weight: 600; color: var(--green);">
+				Buka Portal Pelamar ↗
+			</a>
 		{:else if session.user.role === 'VENDOR'}
 			<a class="button secondary" href={resolve('/(app)/(protected)/vendor')}>Buka Portal Penyelenggara ↗</a>
 		{/if}
@@ -170,6 +179,241 @@
 		</div>
 	</div>
 </section>
+
+<!-- ================= USER DASHBOARD SECTION (Tampil saat user login) ================= -->
+{#if session.status === 'authenticated' && session.user && session.user.role === 'CANDIDATE'}
+	<section id="user-dashboard" style="background: white; border: 1px solid var(--line); border-radius: 16px; padding: 36px 32px; margin-bottom: 48px; box-shadow: 0 6px 24px rgba(0,0,0,0.03);">
+		<!-- Top Bar: Sesi Pengguna -->
+		<div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); padding-bottom: 24px; margin-bottom: 28px; flex-wrap: wrap; gap: 20px;">
+			<div style="display: flex; align-items: center; gap: 16px;">
+				<div style="position: relative;">
+					<span style="width: 54px; height: 54px; border-radius: 50%; background: #e7eddf; color: var(--green); display: grid; place-items: center; font-size: 22px; font-weight: 700; border: 2px solid var(--line);">
+						{session.user.name.charAt(0).toUpperCase()}
+					</span>
+					<span style="position: absolute; bottom: 2px; right: 2px; width: 12px; height: 12px; background: #22c55e; border: 2px solid white; border-radius: 50%;" title="Sesi Aktif"></span>
+				</div>
+				<div>
+					<div style="display: flex; align-items: center; gap: 8px;">
+						<h2 style="margin: 0; font-size: 22px; color: var(--ink);">{session.user.name}</h2>
+						<span style="background: #eef5e9; color: var(--green); font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 600;">
+							Kandidat Pelamar
+						</span>
+					</div>
+					<p style="margin: 4px 0 0; font-size: 13px; color: var(--muted);">
+						📧 {session.user.email}
+						{#if profileQuery.data?.phone}
+							• 📞 {profileQuery.data.phone}
+						{/if}
+						{#if profileQuery.data?.address}
+							• 📍 {profileQuery.data.address}
+						{/if}
+					</p>
+				</div>
+			</div>
+
+			<div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+				<a class="button secondary" style="font-size: 12px; padding: 8px 14px; min-height: 36px;" href={resolve('/(app)/(protected)/candidate/profile')}>
+					✏️ Edit Digital CV ↗
+				</a>
+				<a class="button secondary" style="font-size: 12px; padding: 8px 14px; min-height: 36px;" href={resolve('/(app)/(protected)/candidate/documents')}>
+					📁 Buka Document Vault ↗
+				</a>
+				<button
+					type="button"
+					class="text-button"
+					style="font-size: 12px; color: #b91c1c; padding: 8px 12px;"
+					onclick={() => session.logout()}
+				>
+					Keluar Sesi
+				</button>
+			</div>
+		</div>
+
+		<!-- Grid 2 Kolom: Kolom 1 (Seluruh Applyment) & Kolom 2 (Dokumen di Vault) -->
+		<div style="display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 28px;">
+			<!-- MODULE 1: SELURUH APPLYMENT (LAMARAN SAYA) -->
+			<div>
+				<div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px;">
+					<div>
+						<span class="eyebrow" style="margin-bottom: 2px;">STATUS LAMARAN ANDA</span>
+						<h3 style="margin: 0; font-size: 18px; color: var(--green);">
+							Seluruh Applyment ({myAppsQuery.data?.length || 0})
+						</h3>
+					</div>
+					<a href={resolve('/(app)/(protected)/candidate/applications')} style="font-size: 12px; font-weight: 600; color: var(--green); text-decoration: underline;">
+						Semua di Tracker ↗
+					</a>
+				</div>
+
+				{#if myAppsQuery.isPending}
+					<div class="notice" style="font-size: 13px;">Memuat riwayat lamaran Anda…</div>
+				{:else if myAppsQuery.isError}
+					<div class="notice error" style="font-size: 13px;">{errorMessage(myAppsQuery.error)}</div>
+				{:else if !myAppsQuery.data || myAppsQuery.data.length === 0}
+					<div style="background: #fbfcf9; border: 1px dashed var(--line); border-radius: 12px; padding: 28px; text-align: center;">
+						<span style="font-size: 28px; display: block; margin-bottom: 8px;">📬</span>
+						<strong style="color: var(--ink); font-size: 14px;">Belum Ada Lamaran Terkirim</strong>
+						<p style="color: var(--muted); font-size: 12px; margin: 4px 0 14px; line-height: 1.5;">
+							Anda belum melamar lowongan kerja mana pun. Jelajahi formasi yang tersedia di bawah dan ajukan berkas Anda.
+						</p>
+						<a class="button" href="#daftar-lowongan" style="font-size: 11px; padding: 8px 14px;">
+							Pilih Lowongan Sekarang ↓
+						</a>
+					</div>
+				{:else}
+					<div style="display: flex; flex-direction: column; gap: 12px; max-height: 380px; overflow-y: auto; padding-right: 6px;">
+						{#each myAppsQuery.data as app (app.id)}
+							{@const stage = applicationStageConfig[app.stage] || { label: app.stage, tone: 'info', description: '' }}
+							<div style="background: #fbfcf9; border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px;">
+								<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 6px;">
+									<div>
+										<strong style="font-size: 14px; color: var(--ink); display: block;">
+											{app.jobTitle || 'Posisi Lowongan'}
+										</strong>
+										<span style="font-size: 12px; color: #526b4d; font-weight: 600;">
+											{app.vendorName || 'Mitra Penyelenggara'} • 📍 {app.vendorLocation || 'Indonesia'}
+										</span>
+									</div>
+									<span
+										style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px; white-space: nowrap;
+										{stage.tone === 'success' ? 'background: #dcfce7; color: #15803d;' : ''}
+										{stage.tone === 'pending' ? 'background: #fef3c7; color: #92400e;' : ''}
+										{stage.tone === 'danger' ? 'background: #fee2e2; color: #b91c1c;' : ''}
+										{stage.tone === 'info' ? 'background: #e0f2fe; color: #0369a1;' : ''}
+										{stage.tone === 'neutral' ? 'background: #f1f5f9; color: #475569;' : ''}"
+									>
+										{stage.label}
+									</span>
+								</div>
+
+								<div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--muted); border-top: 1px solid #edf1eb; padding-top: 8px; margin-top: 8px;">
+									<span>Dilamar: {new Date(app.appliedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+									<a href={resolve('/(app)/(protected)/candidate/applications')} style="color: var(--green); font-weight: 600; text-decoration: underline;">
+										Detail Progres ↗
+									</a>
+								</div>
+							</div>
+						{/each}
+					</div>
+				{/if}
+			</div>
+
+			<!-- MODULE 2: DOKUMEN YANG DI-UPLOAD (DOCUMENT VAULT SUMMARY) -->
+			<div>
+				<div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px;">
+					<div>
+						<span class="eyebrow" style="margin-bottom: 2px;">BRANKAS DIGITAL</span>
+						<h3 style="margin: 0; font-size: 18px; color: var(--green);">Dokumen di Vault</h3>
+					</div>
+					<a href={resolve('/(app)/(protected)/candidate/documents')} style="font-size: 12px; font-weight: 600; color: var(--green); text-decoration: underline;">
+						Kelola Vault ↗
+					</a>
+				</div>
+
+				<div style="display: flex; flex-direction: column; gap: 10px;">
+					<!-- Dokumen CV / Resume -->
+					<div style="background: #fbfcf9; border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center;">
+						<div style="display: flex; align-items: center; gap: 10px;">
+							<span style="font-size: 20px;">📄</span>
+							<div>
+								<strong style="font-size: 13px; color: var(--ink); display: block;">Curriculum Vitae (CV)</strong>
+								{#if resumeDoc}
+									<span style="font-size: 11px; color: var(--muted);">
+										{resumeDoc.name} ({Math.round(resumeDoc.size / 1024)} KB)
+									</span>
+								{:else}
+									<span style="font-size: 11px; color: #dc2626; font-weight: 600;">
+										⚠️ Belum diunggah (Wajib untuk melamar)
+									</span>
+								{/if}
+							</div>
+						</div>
+						<div>
+							{#if resumeDoc}
+								<span style="font-size: 11px; background: #dcfce7; color: #15803d; padding: 3px 8px; border-radius: 4px; font-weight: 600;">
+									✓ Aktif
+								</span>
+							{:else}
+								<a class="button secondary" style="font-size: 10px; padding: 5px 10px;" href={resolve('/(app)/(protected)/candidate/documents')}>
+									Unggah ↗
+								</a>
+							{/if}
+						</div>
+					</div>
+
+					<!-- Dokumen KTP -->
+					<div style="background: #fbfcf9; border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center;">
+						<div style="display: flex; align-items: center; gap: 10px;">
+							<span style="font-size: 20px;">🪪</span>
+							<div>
+								<strong style="font-size: 13px; color: var(--ink); display: block;">Kartu Tanda Penduduk (KTP)</strong>
+								{#if idDoc}
+									<span style="font-size: 11px; color: var(--muted);">
+										{idDoc.name} ({Math.round(idDoc.size / 1024)} KB)
+									</span>
+								{:else}
+									<span style="font-size: 11px; color: var(--muted);">
+										Belum diunggah (Opsional / verifikasi)
+									</span>
+								{/if}
+							</div>
+						</div>
+						<div>
+							{#if idDoc}
+								<span style="font-size: 11px; background: #dcfce7; color: #15803d; padding: 3px 8px; border-radius: 4px; font-weight: 600;">
+									✓ Aktif
+								</span>
+							{:else}
+								<a class="button secondary" style="font-size: 10px; padding: 5px 10px;" href={resolve('/(app)/(protected)/candidate/documents')}>
+									Unggah ↗
+								</a>
+							{/if}
+						</div>
+					</div>
+
+					<!-- Dokumen Lainnya jika ada -->
+					{#each userDocs.filter((d) => d.type !== 'CV' && d.type !== 'KTP' && d.active) as extraDoc (extraDoc.id)}
+						<div style="background: #fbfcf9; border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+							<div style="display: flex; align-items: center; gap: 10px;">
+								<span style="font-size: 18px;">📜</span>
+								<div>
+									<strong style="font-size: 12px; color: var(--ink); display: block;">{extraDoc.type}: {extraDoc.name}</strong>
+									<span style="font-size: 11px; color: var(--muted);">{Math.round(extraDoc.size / 1024)} KB</span>
+								</div>
+							</div>
+							<span style="font-size: 10px; background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; font-weight: 600;">
+								Lampiran
+							</span>
+						</div>
+					{/each}
+
+					<div style="background: #edf0e6; border-radius: 8px; padding: 12px; font-size: 11px; color: #496347; line-height: 1.5; margin-top: 4px;">
+						🔒 <strong>Keamanan Berkas:</strong> Berkas di Document Vault terenkripsi dan otomatis dilampirkan setiap Anda mengirimkan lamaran kerja.
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+{:else if session.status === 'authenticated' && session.user && session.user.role === 'VENDOR'}
+	<!-- Sesi Mitra Penyelenggara -->
+	<section style="background: #edf0e6; border: 1px solid var(--line); border-radius: 16px; padding: 32px; margin-bottom: 48px;">
+		<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+			<div style="display: flex; align-items: center; gap: 14px;">
+				<span style="width: 48px; height: 48px; border-radius: 50%; background: var(--green); color: white; display: grid; place-items: center; font-size: 20px; font-weight: bold;">
+					🏢
+				</span>
+				<div>
+					<h3 style="margin: 0; font-size: 20px; color: var(--green);">Sesi Mitra: {session.user.name}</h3>
+					<p style="margin: 2px 0 0; font-size: 13px; color: #496347;">{session.user.email} • Akun Penyelenggara Kerja</p>
+				</div>
+			</div>
+			<div style="display: flex; gap: 10px;">
+				<a class="button" href={resolve('/(app)/(protected)/vendor')}>Buka Portal Penyelenggara ↗</a>
+				<button type="button" class="text-button" onclick={() => session.logout()}>Keluar</button>
+			</div>
+		</div>
+	</section>
+{/if}
 
 <!-- Section Daftar Lowongan & Apply -->
 <section id="daftar-lowongan" style="padding: 40px 0 60px;">

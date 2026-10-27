@@ -3,8 +3,19 @@
 	import favicon from '#lib/assets/favicon.svg';
 	import { onMount } from 'svelte';
 	import { QueryClient, QueryClientProvider } from '@tanstack/svelte-query';
-	import { ApiClient, ApiError } from '#lib/api/client.ts';
-	import { AuthSession, provideSession } from '#lib/auth/session.svelte.ts';
+	import {
+		ApiClient,
+		ApiError,
+		USER_TOKEN_KEY,
+		USER_LOGOUT_KEY,
+		ADMIN_TOKEN_KEY,
+		ADMIN_LOGOUT_KEY
+	} from '#lib/api/client.ts';
+	import {
+		AuthSession,
+		provideUserSession,
+		provideAdminSession
+	} from '#lib/auth/session.svelte.ts';
 	import type { LayoutProps } from './$types';
 
 	let { children }: LayoutProps = $props();
@@ -28,14 +39,29 @@
 		length: 0
 	};
 
-	const session = provideSession(
-		new AuthSession(new ApiClient(typeof window !== 'undefined' ? localStorage : dummyStorage), queries)
+	const storage = typeof window !== 'undefined' ? localStorage : dummyStorage;
+
+	// User session terpisah (kandidat pelamar & mitra penyelenggara): key = upstream.user_token
+	const userSession = provideUserSession(
+		new AuthSession(new ApiClient(storage, fetch, USER_TOKEN_KEY, USER_LOGOUT_KEY), queries, 'user')
+	);
+
+	// Admin session terpisah (staf internal & superadmin): key = upstream.admin_token
+	const adminSession = provideAdminSession(
+		new AuthSession(new ApiClient(storage, fetch, ADMIN_TOKEN_KEY, ADMIN_LOGOUT_KEY), queries, 'admin')
 	);
 
 	onMount(() => {
-		const stop = session.listen();
-		void session.bootstrap();
-		return stop;
+		const stopUser = userSession.listen();
+		const stopAdmin = adminSession.listen();
+
+		void userSession.bootstrap();
+		void adminSession.bootstrap();
+
+		return () => {
+			stopUser();
+			stopAdmin();
+		};
 	});
 </script>
 

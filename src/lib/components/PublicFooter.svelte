@@ -31,9 +31,6 @@
 				<a href="{resolve('/(app)/register')}?role=VENDOR" style="color: var(--green); font-weight: 600;">
 					Daftar Penyelenggara ↗
 				</a>
-				<a href={resolve('/(app)/admin/login')} style="color: var(--muted); font-size: 11px;">
-					Konsol Staf Admin ↗
-				</a>
 			</div>
 		</div>
 	</div>

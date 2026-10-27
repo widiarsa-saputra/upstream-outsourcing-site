@@ -1,10 +1,19 @@
 import { getContext, setContext } from 'svelte';
 import { QueryClient } from '@tanstack/svelte-query';
-import { ApiClient, ApiError, LOGOUT_KEY, TOKEN_KEY, type TokenResponse } from '#lib/api/client.ts';
+import {
+	ApiClient,
+	ApiError,
+	USER_LOGOUT_KEY,
+	USER_TOKEN_KEY,
+	ADMIN_LOGOUT_KEY,
+	ADMIN_TOKEN_KEY,
+	type TokenResponse
+} from '#lib/api/client.ts';
 import type { components } from '../api/schema';
 export type User = components['schemas']['UserResponse'];
 import { resolve } from '$app/paths';
 import type { ResolvedPathname } from '$app/types';
+
 export function homeFor(user: User): ResolvedPathname {
 	if (['SUPERADMIN', 'TALENT_ACQUISITION', 'LEGAL'].includes(user.role))
 		return resolve('/(app)/(protected)/admin');
@@ -12,12 +21,14 @@ export function homeFor(user: User): ResolvedPathname {
 		? resolve('/(app)/(protected)/vendor')
 		: resolve('/(app)/(protected)/candidate');
 }
+
 export function safeDestination(value: string | null, user: User): ResolvedPathname {
 	const prefix = homeFor(user);
 	return value && (value === prefix || value.startsWith(prefix + '/')) && !value.includes('\\')
 		? (value as ResolvedPathname)
 		: prefix;
 }
+
 export class AuthSession {
 	user = $state<User | null>(null);
 	status = $state<'initializing' | 'authenticated' | 'anonymous' | 'error'>('initializing');
@@ -25,37 +36,63 @@ export class AuthSession {
 	private epoch = 0;
 	public readonly api: ApiClient;
 	public readonly queries: QueryClient;
-	constructor(api: ApiClient, queries: QueryClient) {
+	public readonly scope: 'user' | 'admin';
+
+	constructor(api: ApiClient, queries: QueryClient, scope: 'user' | 'admin' = 'user') {
 		this.api = api;
 		this.queries = queries;
+		this.scope = scope;
 		api.onExpired = () => this.reset();
 	}
-	private reset() {
+
+	reset() {
 		this.epoch++;
 		this.user = null;
 		this.status = 'anonymous';
 		void this.queries.cancelQueries();
 		this.queries.clear();
 	}
+
 	async bootstrap() {
 		const epoch = ++this.epoch;
 		this.status = 'initializing';
 		this.error = '';
+
+		// Jika tidak ada token pada scope ini, langsung set anonymous.
+		// JANGAN memanggil api.refresh() jika storage kosong agar tidak mencuri refresh cookie dari scope lain!
+		if (!this.api.token) {
+			this.reset();
+			return;
+		}
+
 		try {
-			if (!this.api.token) await this.api.refresh();
 			const user = await this.queries.fetchQuery({
-				queryKey: ['auth', 'me'],
+				queryKey: ['auth', 'me', this.scope],
 				queryFn: ({ signal }) => this.api.request<User>('/auth/me', { signal }),
 				staleTime: 0,
 				retry: false
 			});
 			if (epoch === this.epoch) {
+				const isAdmin = ['SUPERADMIN', 'TALENT_ACQUISITION', 'LEGAL'].includes(user.role);
+				if (this.scope === 'user' && isAdmin) {
+					// Akun admin tidak diizinkan menempati sesi user publik
+					this.api.clear();
+					this.reset();
+					return;
+				}
+				if (this.scope === 'admin' && !isAdmin) {
+					// Akun non-admin tidak diizinkan menempati sesi admin
+					this.api.clear();
+					this.reset();
+					return;
+				}
 				this.user = user;
 				this.status = 'authenticated';
 			}
 		} catch (error) {
 			if (epoch !== this.epoch) return;
 			if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+				this.api.clear();
 				this.reset();
 			} else {
 				this.status = 'error';
@@ -63,6 +100,7 @@ export class AuthSession {
 			}
 		}
 	}
+
 	async accept(result: TokenResponse) {
 		this.api.clear();
 		this.reset();
@@ -71,6 +109,7 @@ export class AuthSession {
 		await this.bootstrap();
 		if (!this.user) throw new Error(this.error || 'Sesi tidak dapat dimuat.');
 	}
+
 	async login(input: { email: string; password: string }) {
 		const result = await this.api.request<TokenResponse>('/auth/login', {
 			method: 'POST',
@@ -78,28 +117,69 @@ export class AuthSession {
 			anonymous: true
 		});
 		await this.accept(result);
+		if (this.user) {
+			const isAdmin = ['SUPERADMIN', 'TALENT_ACQUISITION', 'LEGAL'].includes(this.user.role);
+			if (this.scope === 'user' && isAdmin) {
+				await this.logout();
+				throw new Error(
+					'Akun ini adalah akun staf/administrator. Portal ini khusus untuk kandidat pelamar dan mitra penyelenggara.'
+				);
+			}
+			if (this.scope === 'admin' && !isAdmin) {
+				await this.logout();
+				throw new Error('Akses ditolak: Akun Anda bukan akun Staf Internal atau Administrator Upstream.');
+			}
+		}
 	}
+
 	async logout() {
-		// Keep a visible error if server revocation fails rather than reporting a successful logout.
-		await this.api.request('/auth/logout', { method: 'POST', anonymous: true });
+		try {
+			await this.api.request('/auth/logout', { method: 'POST', anonymous: true });
+		} catch {
+			// ignore network error on logout
+		}
 		this.api.clear();
 		this.reset();
-		localStorage.setItem(LOGOUT_KEY, crypto.randomUUID());
+		if (typeof localStorage !== 'undefined') {
+			localStorage.setItem(this.api.logoutKey, crypto.randomUUID());
+		}
 	}
+
 	listen() {
 		const listener = (event: StorageEvent) => {
-			if (event.key === LOGOUT_KEY || (event.key === TOKEN_KEY && !event.newValue)) {
+			if (event.key === this.api.logoutKey || (event.key === this.api.tokenKey && !event.newValue)) {
 				this.api.clear();
 				this.reset();
-			} else if (event.key === TOKEN_KEY && event.newValue && this.status !== 'initializing') {
+			} else if (event.key === this.api.tokenKey && event.newValue && this.status !== 'initializing') {
 				this.reset();
 				void this.bootstrap();
 			}
 		};
-		window.addEventListener('storage', listener);
-		return () => window.removeEventListener('storage', listener);
+		if (typeof window !== 'undefined') {
+			window.addEventListener('storage', listener);
+			return () => window.removeEventListener('storage', listener);
+		}
+		return () => {};
 	}
 }
-const SESSION = Symbol('upstream.session');
-export const provideSession = (session: AuthSession) => setContext(SESSION, session);
-export const useSession = () => getContext<AuthSession>(SESSION);
+
+const USER_SESSION = Symbol('upstream.user.session');
+const ADMIN_SESSION = Symbol('upstream.admin.session');
+
+export const provideSession = (session: AuthSession) => setContext(USER_SESSION, session);
+export const provideUserSession = (session: AuthSession) => setContext(USER_SESSION, session);
+export const provideAdminSession = (session: AuthSession) => setContext(ADMIN_SESSION, session);
+
+export const useSession = (overrideScope?: 'user' | 'admin'): AuthSession => {
+	const admin = getContext<AuthSession>(ADMIN_SESSION);
+	const user = getContext<AuthSession>(USER_SESSION);
+	if (overrideScope === 'admin') return admin || user;
+	if (overrideScope === 'user') return user || admin;
+	if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')) {
+		return admin || user;
+	}
+	return user || admin;
+};
+
+export const useUserSession = () => getContext<AuthSession>(USER_SESSION);
+export const useAdminSession = () => getContext<AuthSession>(ADMIN_SESSION) || getContext<AuthSession>(USER_SESSION);
