@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
+	import favicon from '#lib/assets/favicon.svg';
 	import { createQuery, createMutation } from '@tanstack/svelte-query';
 	import { salaryLabel, statusLabel, dateLabel, type PublicJob } from '#lib/marketplace/types.ts';
 	import { useSession } from '#lib/auth/session.svelte.ts';
@@ -119,6 +121,55 @@
 			coverLetter: coverLetter.trim() || undefined
 		});
 	}
+
+	function getStageToneStyle(tone: string): string {
+		switch (tone) {
+			case 'success':
+				return 'background: #dcfce7; color: #15803d;';
+			case 'pending':
+				return 'background: #fef3c7; color: #92400e;';
+			case 'danger':
+				return 'background: #fee2e2; color: #b91c1c;';
+			case 'info':
+				return 'background: #e0f2fe; color: #0369a1;';
+			case 'neutral':
+			default:
+				return 'background: #f1f5f9; color: #475569;';
+		}
+	}
+
+	const canonicalUrl = $derived(`${page.url.origin}${page.url.pathname}`);
+	const shareImage = $derived(`${page.url.origin}${favicon}`);
+	const jsonLd = $derived(
+		JSON.stringify({
+			'@context': 'https://schema.org',
+			'@graph': [
+				{
+					'@type': 'WebSite',
+					'@id': `${page.url.origin}/#website`,
+					url: page.url.origin,
+					name: 'Upstream',
+					description:
+						'Platform alih daya dan rekrutmen kerja terverifikasi di Indonesia dengan digital CV dan zero placement fee.',
+					inLanguage: 'id-ID',
+					potentialAction: {
+						'@type': 'SearchAction',
+						target: `${page.url.origin}/jobs?q={search_term_string}`,
+						'query-input': 'required name=search_term_string'
+					}
+				},
+				{
+					'@type': 'Organization',
+					'@id': `${page.url.origin}/#organization`,
+					name: 'Upstream',
+					url: page.url.origin,
+					logo: shareImage,
+					description:
+						'Platform alih daya dan rekrutmen kerja terverifikasi di Indonesia. Jelajahi lowongan resmi mitra terverifikasi, digital CV, dan jaminan zero placement fee.'
+				}
+			]
+		})
+	);
 </script>
 
 <svelte:head>
@@ -127,6 +178,38 @@
 		name="description"
 		content="Platform alih daya dan rekrutmen kerja terverifikasi di Indonesia. Jelajahi lowongan resmi mitra perusahaan, digital CV, dan jaminan zero placement fee."
 	/>
+	<meta
+		name="keywords"
+		content="outsourcing terpercaya, alih daya indonesia, lowongan kerja terverifikasi, rekrutmen talenta, digital cv, zero placement fee, karir upstream"
+	/>
+	<meta name="author" content="Upstream" />
+	<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+	<link rel="canonical" href={canonicalUrl} />
+
+	<!-- Open Graph / Facebook -->
+	<meta property="og:type" content="website" />
+	<meta property="og:site_name" content="Upstream" />
+	<meta property="og:title" content="Upstream — Platform Alih Daya & Rekrutmen Talenta Terverifikasi" />
+	<meta
+		property="og:description"
+		content="Platform alih daya dan rekrutmen kerja terverifikasi di Indonesia. Jelajahi lowongan resmi mitra perusahaan, digital CV, dan jaminan zero placement fee."
+	/>
+	<meta property="og:url" content={canonicalUrl} />
+	<meta property="og:image" content={shareImage} />
+	<meta property="og:locale" content="id_ID" />
+
+	<!-- Twitter Card -->
+	<meta name="twitter:card" content="summary" />
+	<meta name="twitter:title" content="Upstream — Platform Alih Daya & Rekrutmen Talenta Terverifikasi" />
+	<meta
+		name="twitter:description"
+		content="Platform alih daya dan rekrutmen kerja terverifikasi di Indonesia. Jelajahi lowongan resmi mitra perusahaan, digital CV, dan jaminan zero placement fee."
+	/>
+	<meta name="twitter:image" content={shareImage} />
+
+	<!-- Structured Data (JSON-LD) -->
+	<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+	{@html `<script type="application/ld+json">${jsonLd}</${'script'}>`}
 </svelte:head>
 
 <div class="public-site">
@@ -275,12 +358,7 @@
 										</span>
 									</div>
 									<span
-										style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px; white-space: nowrap;
-										{stage.tone === 'success' ? 'background: #dcfce7; color: #15803d;' : ''}
-										{stage.tone === 'pending' ? 'background: #fef3c7; color: #92400e;' : ''}
-										{stage.tone === 'danger' ? 'background: #fee2e2; color: #b91c1c;' : ''}
-										{stage.tone === 'info' ? 'background: #e0f2fe; color: #0369a1;' : ''}
-										{stage.tone === 'neutral' ? 'background: #f1f5f9; color: #475569;' : ''}"
+										style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px; white-space: nowrap; {getStageToneStyle(stage.tone)}"
 									>
 										{stage.label}
 									</span>
