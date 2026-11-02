@@ -7,15 +7,19 @@
 	import { errorMessage } from '#lib/api/client.ts';
 	import type { LayoutProps } from './$types';
 	let { children }: LayoutProps = $props();
-	const session = useSession();
+	const session = useSession('admin');
 	const logout = createMutation(() => ({ mutationFn: () => session.logout() }));
+	const canAccess = $derived(
+		session.user?.role === 'SUPERADMIN' ||
+			Boolean(session.user?.permissions.includes('admin.overview'))
+	);
 	$effect(() => {
-		if (session.user && !session.user.permissions.includes('admin.overview'))
+		if (session.user && !canAccess)
 			void goto(homeFor(session.user), { replaceState: true });
 	});
 </script>
 
-{#if session.user?.permissions.includes('admin.overview')}
+{#if canAccess && session.user}
 	<div class="workspace">
 		<aside class="sidebar">
 			<a class="brand" href={resolve('/')}><span class="brand-mark">u↗</span> upstream.</a>
@@ -81,4 +85,9 @@
 			<div class="workspace-content">{@render children()}</div>
 		</main>
 	</div>
+{:else}
+	<main class="center-state" aria-live="polite">
+		<span class="brand-mark">u↗</span>
+		<p>Menyiapkan konsol administrator…</p>
+	</main>
 {/if}

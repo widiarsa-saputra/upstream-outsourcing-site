@@ -12,7 +12,7 @@
 		type ApplicationTransition
 	} from '#lib/candidate/applications.ts';
 
-	const session = useSession();
+	const session = useSession('admin');
 	const queryClient = useQueryClient();
 	const allowed = $derived(!!session.user?.permissions.includes('application.screen'));
 

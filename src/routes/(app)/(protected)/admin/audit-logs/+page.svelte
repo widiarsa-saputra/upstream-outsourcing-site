@@ -7,7 +7,7 @@
 
 	type AuditLogPage = components['schemas']['AuditLogPageResponse'];
 
-	const session = useSession();
+	const session = useSession('admin');
 	const allowed = $derived(!!session.user?.permissions.includes('audit.read'));
 
 	let actionFilter = $state('');

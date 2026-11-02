@@ -100,13 +100,14 @@ export class ApiClient {
 					throw new ApiError(401, 'SESSION_CHANGED', 'Sesi sudah berubah.');
 				if (this.token && this.token !== tokenBefore) return;
 				try {
-					const result = await this.request<TokenResponse>('/auth/refresh', {
+					const result = await this.request<TokenResponse & { token?: string }>('/auth/refresh', {
 						method: 'POST',
 						anonymous: true
 					});
-					if (generation === this.generation) this.setToken(result.accessToken);
+					const token = result.accessToken || result.token;
+					if (generation === this.generation && token) this.setToken(token);
 				} catch (error) {
-					if (error instanceof ApiError && error.status === 401) {
+					if (error instanceof ApiError && (error.status === 401 || error.status === 404)) {
 						this.clear();
 						this.onExpired();
 					}

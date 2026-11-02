@@ -28,6 +28,93 @@
 	let applySuccess = $state(false);
 	let applyError = $state('');
 
+	// ==================== SLIDER BERANDA (HERO CAROUSEL) ====================
+	let currentSlide = $state(0);
+	const heroSlides = [
+		{
+			badge: 'PROGRAM KARIER & PENEMPATAN RESMI',
+			title: 'Akselerasi Karier Profesional Bersama Mitra Terpercaya',
+			subtitle: 'Ratusan formasi kerja alih daya langsung dari mitra korporasi terverifikasi dengan kontrak kerja transparan dan kepatuhan hukum penuh.',
+			tag: 'Peluang Terverifikasi',
+			icon: '🌟'
+		},
+		{
+			badge: 'DOCUMENT VAULT & DIGITAL CV',
+			title: 'Satu Kali Unggah Berkas, Lamar Berbagai Peluang',
+			subtitle: 'Simpan CV, KTP, dan portofolio Anda di brankas terenkripsi. Berkas otomatis terlampir saat Anda mendaftar program tanpa repot unggah ulang.',
+			tag: 'Hemat Waktu & Aman',
+			icon: '🔒'
+		},
+		{
+			badge: 'ZERO PLACEMENT FEE GUARANTEE',
+			title: '100% Bebas Biaya Pungutan bagi Semua Pencari Kerja',
+			subtitle: 'Tanpa calo, tanpa potongan gaji. Setiap talenta berhak mendapatkan akses kesempatan kerja yang adil, setara, dan terlindungi.',
+			tag: 'Zero Fee',
+			icon: '🤝'
+		}
+	];
+
+	function nextSlide() {
+		currentSlide = (currentSlide + 1) % heroSlides.length;
+	}
+
+	function prevSlide() {
+		currentSlide = (currentSlide - 1 + heroSlides.length) % heroSlides.length;
+	}
+
+	function goToSlide(index: number) {
+		currentSlide = index;
+	}
+
+	// ==================== SEARCH FINDER BERANDA ====================
+	let searchKeyword = $state('');
+	let searchCategory = $state('');
+
+	function handleHeroSearch(e: SubmitEvent) {
+		e.preventDefault();
+		const params = new URLSearchParams();
+		if (searchKeyword.trim()) params.set('q', searchKeyword.trim());
+		if (searchCategory.trim()) params.set('industry', searchCategory.trim());
+		void goto(`${resolve('/(public)/layanan')}?${params.toString()}`);
+	}
+
+	// ==================== DATA TESTIMONI ====================
+	const testimonials = [
+		{
+			name: 'Rizky Fauzi Pratama',
+			role: 'Staff Logistik & Inventori',
+			company: 'Mitra Logistik Nusantara Prima',
+			avatar: 'R',
+			avatarBg: '#dcfce7',
+			avatarColor: '#166534',
+			rating: 5,
+			quote:
+				'Proses pendaftaran sangat transparan dan cepat. Setelah upload CV di Document Vault, dalam 3 hari saya langsung dipanggil interview. Benar-benar zero fee tanpa biaya calo sedikit pun.'
+		},
+		{
+			name: 'Ni Made Anindya Putri',
+			role: 'Customer Support Specialist',
+			company: 'Mitra PT Global Solusindo',
+			avatar: 'N',
+			avatarBg: '#e0f2fe',
+			avatarColor: '#0369a1',
+			rating: 5,
+			quote:
+				'Sistem pelacakannya sangat rapi. Dari pengiriman lamaran, review berkas, hingga offering letter semuanya terpantau jelas di dashboard kandidat. Sangat profesional!'
+		},
+		{
+			name: 'Ahmad Faisal',
+			role: 'Teknisi Operasional Lapangan',
+			company: 'Mitra Energi Jaya Sentosa',
+			avatar: 'A',
+			avatarBg: '#fef3c7',
+			avatarColor: '#92400e',
+			rating: 5,
+			quote:
+				'Fitur pencarian dan filter program sangat memudahkan menemukan posisi yang pas dengan keahlian saya. Sekarang saya sudah bekerja kontrak resmi dengan benefit yang jelas.'
+		}
+	];
+
 	// Ambil profil kandidat jika sedang login sebagai kandidat
 	const profileQuery = createQuery(() => ({
 		queryKey: ['candidate', session.user?.id, 'profile'],
@@ -217,51 +304,164 @@
 
 	<!-- Hero Section -->
 	<section class="landing-main" style="padding: 20px 0 60px;">
-		<p class="eyebrow">MANUSIA. PELUANG. PERTUMBUHAN.</p>
-	<h1 style="font-size: clamp(2.8rem, 6vw, 5rem); line-height: 1.08; max-width: 960px; margin-bottom: 24px;">
-		Langkah berikutnya,<br /><em>bersama Upstream.</em>
-	</h1>
-	<p class="lead" style="max-width: 760px; margin-bottom: 32px; font-size: 18px; color: var(--muted); line-height: 1.6;">
-		Ruang terverifikasi bertemunya talenta terbaik dengan mitra penyelenggara kerja. Bangun Digital CV Anda, unggah dokumen di brankas terenkripsi, dan lamar peluang tanpa perantara.
-	</p>
+		<div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+			<div>
+				<p class="eyebrow" style="margin-bottom: 8px;">GO CAREER • PLATFORM ALIH DAYA & PENEMPATAN TALENTA</p>
+				<h1 style="font-size: clamp(2.6rem, 5.5vw, 4.5rem); line-height: 1.1; max-width: 900px; margin-bottom: 16px;">
+					Langkah berikutnya,<br /><em>bersama ekosistem terpercaya.</em>
+				</h1>
+				<p class="lead" style="max-width: 740px; margin-bottom: 0; font-size: 17px; color: var(--muted); line-height: 1.6;">
+					Ruang aman dan terverifikasi bertemunya talenta terbaik dengan mitra penyelenggara kerja resmi. Susun Digital CV, amankan berkas di Document Vault terenkripsi, dan lamar peluang tanpa perantara.
+				</p>
+			</div>
+			<div class="actions" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+				{#if !session.user}
+					<a class="button primary" href={resolve('/(app)/register')}>Daftar sebagai Pelamar ↗</a>
+					<a class="button secondary" href="{resolve('/(app)/register')}?role=VENDOR">Kemitraan Penyelenggara →</a>
+				{:else if session.user.role === 'CANDIDATE'}
+					<a class="button primary" href="#user-dashboard">Dashboard Pelamar Saya ↓</a>
+					<a class="button secondary" href={resolve('/(app)/(protected)/candidate/profile')}>Edit Digital CV ↗</a>
+				{:else if session.user.role === 'VENDOR'}
+					<a class="button primary" href={resolve('/(app)/(protected)/vendor')}>Buka Portal Penyelenggara ↗</a>
+				{/if}
+			</div>
+		</div>
 
-	<div class="actions" style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-bottom: 48px;">
-		<a class="button" href="#daftar-lowongan">Jelajahi Lowongan Kerja ↓</a>
-		{#if !session.user}
-			<a class="button secondary" href={resolve('/(app)/register')}>Daftar sebagai Pelamar ↗</a>
-			<a class="text-link" href="{resolve('/(app)/register')}?role=VENDOR" style="font-size: 13px; font-weight: 600; color: var(--green);">
-				Untuk Mitra Penyelenggara →
-			</a>
-		{:else if session.user.role === 'CANDIDATE'}
-			<a class="button secondary" href="#user-dashboard">Lihat Dashboard Saya ↓</a>
-			<a class="text-link" href={resolve('/(app)/(protected)/candidate')} style="font-size: 13px; font-weight: 600; color: var(--green);">
-				Buka Portal Pelamar ↗
-			</a>
-		{:else if session.user.role === 'VENDOR'}
-			<a class="button secondary" href={resolve('/(app)/(protected)/vendor')}>Buka Portal Penyelenggara ↗</a>
-		{/if}
-	</div>
+		<!-- ==================== HERO SLIDER CAROUSEL ==================== -->
+		<div
+			class="hero-slider"
+			style="position: relative; background: linear-gradient(135deg, #153f35 0%, #1e5246 100%); border-radius: 18px; padding: 36px 40px; color: white; margin-bottom: 28px; box-shadow: 0 10px 30px rgba(21,63,53,0.18); overflow: hidden; min-height: 200px; display: flex; flex-direction: column; justify-content: space-between;"
+		>
+			<!-- Decorative Background Glow -->
+			<div style="position: absolute; top: -60px; right: -60px; width: 220px; height: 220px; background: rgba(198, 239, 117, 0.15); border-radius: 50%; filter: blur(50px); pointer-events: none;"></div>
+			<div style="position: absolute; bottom: -40px; left: 30%; width: 180px; height: 180px; background: rgba(255, 255, 255, 0.06); border-radius: 50%; filter: blur(40px); pointer-events: none;"></div>
 
-	<!-- Highlight Key Metrics -->
-	<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 24px 0;">
-		<div>
-			<strong style="display: block; font-size: 26px; color: var(--green); font-weight: 700;">{data.jobs.total}+</strong>
-			<span style="font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px;">Lowongan Terbuka</span>
+			<div style="position: relative; z-index: 2;">
+				<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+					<span style="display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.15); backdrop-filter: blur(8px); padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--accent);">
+						{heroSlides[currentSlide].icon} {heroSlides[currentSlide].badge}
+					</span>
+					<span style="font-size: 12px; color: rgba(255,255,255,0.7); font-weight: 500;">
+						{currentSlide + 1} / {heroSlides.length}
+					</span>
+				</div>
+
+				<h2 style="font-size: clamp(1.4rem, 2.5vw, 2rem); color: white; margin-bottom: 10px; font-weight: 600; line-height: 1.25; max-width: 780px;">
+					{heroSlides[currentSlide].title}
+				</h2>
+				<p style="color: rgba(255,255,255,0.85); font-size: 14px; max-width: 720px; line-height: 1.6; margin-bottom: 20px;">
+					{heroSlides[currentSlide].subtitle}
+				</p>
+			</div>
+
+			<!-- Slider Controls & Dots -->
+			<div style="position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.15); padding-top: 16px; margin-top: 8px; flex-wrap: wrap; gap: 14px;">
+				<div style="display: flex; gap: 8px; align-items: center;">
+					{#each heroSlides as _, idx}
+						<button
+							type="button"
+							aria-label="Pilih Slide {idx + 1}"
+							onclick={() => goToSlide(idx)}
+							style="width: {currentSlide === idx ? '28px' : '9px'}; height: 9px; border-radius: 999px; background: {currentSlide === idx ? 'var(--accent)' : 'rgba(255,255,255,0.3)'}; border: none; cursor: pointer; transition: all 0.25s ease;"
+						></button>
+					{/each}
+				</div>
+
+				<div style="display: flex; gap: 8px; align-items: center;">
+					<button
+						type="button"
+						aria-label="Slide Sebelumnya"
+						onclick={prevSlide}
+						style="width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.12); color: white; border: 1px solid rgba(255,255,255,0.2); display: grid; place-items: center; font-size: 14px; cursor: pointer;"
+					>
+						←
+					</button>
+					<button
+						type="button"
+						aria-label="Slide Berikutnya"
+						onclick={nextSlide}
+						style="width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.12); color: white; border: 1px solid rgba(255,255,255,0.2); display: grid; place-items: center; font-size: 14px; cursor: pointer;"
+					>
+						→
+					</button>
+					<a
+						class="button secondary small"
+						href="#daftar-lowongan"
+						style="font-size: 11px; padding: 6px 14px; background: rgba(255,255,255,0.92); color: var(--green); border: none; font-weight: 600;"
+					>
+						Jelajahi Posisi ↓
+					</a>
+				</div>
+			</div>
 		</div>
-		<div>
-			<strong style="display: block; font-size: 26px; color: var(--green); font-weight: 700;">100%</strong>
-			<span style="font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px;">Mitra Terverifikasi (NIB & NPWP)</span>
+
+		<!-- ==================== SEARCH FINDER BERANDA (KEY SEARCH: NAMA PROGRAM / LABEL) ==================== -->
+		<form
+			onsubmit={handleHeroSearch}
+			style="background: white; border: 1px solid var(--line); border-radius: 14px; padding: 18px 24px; box-shadow: 0 6px 20px rgba(0,0,0,0.04); margin-bottom: 36px;"
+		>
+			<div style="display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap;">
+				<div style="flex: 2; min-width: 240px;">
+					<label for="hero-search-keyword" style="display: block; font-size: 12px; font-weight: 700; color: var(--ink); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">
+						🔍 Posisi atau Nama Program
+					</label>
+					<input
+						id="hero-search-keyword"
+						type="text"
+						bind:value={searchKeyword}
+						placeholder="Contoh: Staff Logistik, IT Developer, Administrasi..."
+						style="width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; font-size: 14px;"
+					/>
+				</div>
+
+				<div style="flex: 1.2; min-width: 180px;">
+					<label for="hero-search-category" style="display: block; font-size: 12px; font-weight: 700; color: var(--ink); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">
+						🏷️ Label / Bidang Industri
+					</label>
+					<select
+						id="hero-search-category"
+						bind:value={searchCategory}
+						style="width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; font-size: 14px; background: white;"
+					>
+						<option value="">Semua Kategori & Bidang</option>
+						<option value="Teknologi Informasi">Teknologi & Digital</option>
+						<option value="Logistik">Logistik & Distribusi</option>
+						<option value="Manufaktur">Manufaktur & Operasional</option>
+						<option value="Perhotelan">Layanan & Hospitality</option>
+						<option value="Administrasi">Administrasi & Keuangan</option>
+					</select>
+				</div>
+
+				<button
+					type="submit"
+					class="button primary"
+					style="min-height: 42px; padding: 0 24px; font-size: 13px; font-weight: 600; justify-content: center;"
+				>
+					Cari Program ↗
+				</button>
+			</div>
+		</form>
+
+		<!-- Highlight Key Metrics -->
+		<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 24px 0;">
+			<div>
+				<strong style="display: block; font-size: 26px; color: var(--green); font-weight: 700;">{data.jobs.total}+</strong>
+				<span style="font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px;">Lowongan Terbuka</span>
+			</div>
+			<div>
+				<strong style="display: block; font-size: 26px; color: var(--green); font-weight: 700;">100%</strong>
+				<span style="font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px;">Mitra Terverifikasi (NIB & NPWP)</span>
+			</div>
+			<div>
+				<strong style="display: block; font-size: 26px; color: var(--green); font-weight: 700;">Rp 0</strong>
+				<span style="font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px;">Zero Placement Fee (Gratis)</span>
+			</div>
+			<div>
+				<strong style="display: block; font-size: 26px; color: var(--green); font-weight: 700;">Vault 🔒</strong>
+				<span style="font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px;">Dokumen Terenkripsi</span>
+			</div>
 		</div>
-		<div>
-			<strong style="display: block; font-size: 26px; color: var(--green); font-weight: 700;">Rp 0</strong>
-			<span style="font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px;">Zero Placement Fee (Gratis)</span>
-		</div>
-		<div>
-			<strong style="display: block; font-size: 26px; color: var(--green); font-weight: 700;">Vault 🔒</strong>
-			<span style="font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px;">Dokumen Terenkripsi</span>
-		</div>
-	</div>
-</section>
+	</section>
 
 <!-- ================= USER DASHBOARD SECTION (Tampil saat user login) ================= -->
 {#if session.status === 'authenticated' && session.user && session.user.role === 'CANDIDATE'}
@@ -503,8 +703,8 @@
 				Peluang kerja alih daya langsung dari mitra penyelenggara resmi. Pilih posisi dan ajukan lamaran secara langsung.
 			</p>
 		</div>
-		<a class="button secondary" href={resolve('/(public)/jobs')}>
-			Lihat Semua Lowongan ({data.jobs.total}) ↗
+		<a class="button secondary" href={resolve('/(public)/layanan')}>
+			Lihat Semua Layanan Program ({data.jobs.total}) ↗
 		</a>
 	</div>
 
@@ -546,7 +746,7 @@
 						{job.vendor.name}
 					</p>
 					<h3 style="font-size: 18px; margin: 0 0 8px; line-height: 1.3;">
-						<a href={resolve('/(public)/jobs/[slug]', { slug: job.slug })} style="color: var(--ink); text-decoration: none;">
+						<a href={resolve('/(public)/layanan/[slug]', { slug: job.slug })} style="color: var(--ink); text-decoration: none;">
 							{job.title}
 						</a>
 					</h3>
@@ -571,7 +771,7 @@
 					<!-- Tombol Aksi: Detail & Apply -->
 					<div style="display: flex; gap: 10px; align-items: center;">
 						<a
-							href={resolve('/(public)/jobs/[slug]', { slug: job.slug })}
+							href={resolve('/(public)/layanan/[slug]', { slug: job.slug })}
 							class="button secondary"
 							style="flex: 1; text-align: center; font-size: 12px; padding: 9px 12px; min-height: 38px;"
 						>
@@ -609,60 +809,194 @@
 	</div>
 </section>
 
-<!-- Section Alur Mudah Bergabung -->
-<section style="background: white; border: 1px solid var(--line); border-radius: 16px; padding: 48px 40px; margin-bottom: 60px; box-shadow: 0 6px 20px rgba(0,0,0,0.02);">
-	<div style="max-width: 680px; margin-bottom: 36px;">
-		<p class="eyebrow" style="margin-bottom: 6px;">ALUR PENEMPATAN KERJA</p>
-		<h2 style="font-size: 32px; margin: 0 0 10px; color: var(--ink);">Empat langkah mudah meniti karier.</h2>
+<!-- ==================== SECTION KEUNTUNGAN APLIKASI (BENEFITS) ==================== -->
+<section style="background: white; border: 1px solid var(--line); border-radius: 16px; padding: 48px 40px; margin-bottom: 40px; box-shadow: 0 6px 20px rgba(0,0,0,0.02);">
+	<div style="max-width: 720px; margin-bottom: 36px;">
+		<p class="eyebrow" style="margin-bottom: 6px;">KEUNTUNGAN BAGI TALENTA & KANDIDAT</p>
+		<h2 style="font-size: 32px; margin: 0 0 10px; color: var(--ink);">Mengapa memilih platform kami?</h2>
 		<p style="color: var(--muted); font-size: 15px; margin: 0; line-height: 1.6;">
-			Transparan, terstruktur, dan tanpa pungutan biaya apa pun bagi para talenta.
+			Kami merancang ekosistem alih daya kerja yang melindungi hak pencari kerja dengan efisiensi tinggi, transparansi penuh, dan kepatuhan hukum ketenagakerjaan RI.
 		</p>
 	</div>
 
-	<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px;">
-		<div style="background: #fbfcf9; border: 1px solid var(--line); border-radius: 10px; padding: 24px;">
-			<span style="font-size: 28px; display: block; margin-bottom: 12px;">📝</span>
-			<strong style="display: block; font-size: 16px; color: var(--green); margin-bottom: 8px;">1. Profil & Digital CV</strong>
+	<!-- 4 Pilar Keuntungan Utama -->
+	<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; margin-bottom: 36px;">
+		<div style="background: #fbfcf9; border: 1px solid var(--line); border-radius: 12px; padding: 24px;">
+			<span style="font-size: 32px; display: block; margin-bottom: 12px;">🛡️</span>
+			<strong style="display: block; font-size: 16px; color: var(--green); margin-bottom: 8px;">Document Vault Terenkripsi</strong>
 			<p style="font-size: 13px; color: var(--muted); line-height: 1.5; margin: 0;">
-				Buat akun dan susun riwayat kerja, pendidikan, serta keahlian kompetensi Anda secara rapi.
+				Cukup satu kali unggah CV dan berkas identitas Anda. Data aman dan otomatis siap dilampirkan ke berbagai formasi kerja.
 			</p>
 		</div>
 
-		<div style="background: #fbfcf9; border: 1px solid var(--line); border-radius: 10px; padding: 24px;">
-			<span style="font-size: 28px; display: block; margin-bottom: 12px;">🛡️</span>
-			<strong style="display: block; font-size: 16px; color: var(--green); margin-bottom: 8px;">2. Document Vault</strong>
+		<div style="background: #fbfcf9; border: 1px solid var(--line); border-radius: 12px; padding: 24px;">
+			<span style="font-size: 32px; display: block; margin-bottom: 12px;">💸</span>
+			<strong style="display: block; font-size: 16px; color: var(--green); margin-bottom: 8px;">Zero Placement Fee (100% Gratis)</strong>
 			<p style="font-size: 13px; color: var(--muted); line-height: 1.5; margin: 0;">
-				Unggah CV PDF dan KTP Anda sekali saja. Dokumen disimpan aman dan otomatis siap dilampirkan.
+				Tanpa pungutan biaya apa pun, tanpa calo, dan tanpa potongan gaji penempatan. Seluruh akses sepenuhnya bebas biaya.
 			</p>
 		</div>
 
-		<div style="background: #fbfcf9; border: 1px solid var(--line); border-radius: 10px; padding: 24px;">
-			<span style="font-size: 28px; display: block; margin-bottom: 12px;">🎯</span>
-			<strong style="display: block; font-size: 16px; color: var(--green); margin-bottom: 8px;">3. Lamar Sekali Klik</strong>
+		<div style="background: #fbfcf9; border: 1px solid var(--line); border-radius: 12px; padding: 24px;">
+			<span style="font-size: 32px; display: block; margin-bottom: 12px;">🏢</span>
+			<strong style="display: block; font-size: 16px; color: var(--green); margin-bottom: 8px;">Mitra Terverifikasi Legalitas</strong>
 			<p style="font-size: 13px; color: var(--muted); line-height: 1.5; margin: 0;">
-				Pilih lowongan yang cocok dan kirim berkas lamaran langsung ke mitra penyelenggara.
+				Seluruh perusahaan mitra telah melewati proses verifikasi NIB, NPWP, dan perizinan berusaha sebelum dapat membuka lowongan.
 			</p>
 		</div>
 
-		<div style="background: #fbfcf9; border: 1px solid var(--line); border-radius: 10px; padding: 24px;">
-			<span style="font-size: 28px; display: block; margin-bottom: 12px;">📊</span>
-			<strong style="display: block; font-size: 16px; color: var(--green); margin-bottom: 8px;">4. Pantau Seleksi Real-time</strong>
+		<div style="background: #fbfcf9; border: 1px solid var(--line); border-radius: 12px; padding: 24px;">
+			<span style="font-size: 32px; display: block; margin-bottom: 12px;">📈</span>
+			<strong style="display: block; font-size: 16px; color: var(--green); margin-bottom: 8px;">Pelacakan Seleksi Real-Time</strong>
 			<p style="font-size: 13px; color: var(--muted); line-height: 1.5; margin: 0;">
-				Ketahui progres wawancara hingga penawaran kerja (offering) secara terbuka di dashboard Anda.
+				Ketahui setiap tahapan secara langsung: kurasi berkas, interview teknis, offering letter, hingga penempatan resmi.
 			</p>
+		</div>
+	</div>
+
+	<!-- 4 Langkah Alur Meniti Karier -->
+	<div style="border-top: 1px dashed var(--line); padding-top: 32px;">
+		<span class="eyebrow" style="margin-bottom: 16px; display: block;">ALUR TAHAPAN PENEMPATAN</span>
+		<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+			<div style="display: flex; gap: 12px; align-items: flex-start;">
+				<span style="background: #e7eddf; color: var(--green); font-weight: 700; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; flex-shrink: 0;">1</span>
+				<div>
+					<strong style="font-size: 13px; color: var(--ink); display: block;">Profil & Digital CV</strong>
+					<span style="font-size: 12px; color: var(--muted);">Daftar akun & lengkapi data keahlian.</span>
+				</div>
+			</div>
+
+			<div style="display: flex; gap: 12px; align-items: flex-start;">
+				<span style="background: #e7eddf; color: var(--green); font-weight: 700; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; flex-shrink: 0;">2</span>
+				<div>
+					<strong style="font-size: 13px; color: var(--ink); display: block;">Amankan Berkas di Vault</strong>
+					<span style="font-size: 12px; color: var(--muted);">Unggah CV dan identitas KTP.</span>
+				</div>
+			</div>
+
+			<div style="display: flex; gap: 12px; align-items: flex-start;">
+				<span style="background: #e7eddf; color: var(--green); font-weight: 700; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; flex-shrink: 0;">3</span>
+				<div>
+					<strong style="font-size: 13px; color: var(--ink); display: block;">Lamar Sekali Klik</strong>
+					<span style="font-size: 12px; color: var(--muted);">Pilih posisi & kirim berkas instan.</span>
+				</div>
+			</div>
+
+			<div style="display: flex; gap: 12px; align-items: flex-start;">
+				<span style="background: #e7eddf; color: var(--green); font-weight: 700; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; flex-shrink: 0;">4</span>
+				<div>
+					<strong style="font-size: 13px; color: var(--ink); display: block;">Pantau Progres Seleksi</strong>
+					<span style="font-size: 12px; color: var(--muted);">Notifikasi status wawancara & offering.</span>
+				</div>
+			</div>
+		</div>
+	</div>
+</section>
+
+<!-- ==================== SECTION TESTIMONI PENGGUNA ==================== -->
+<section style="background: #fbfcf9; border: 1px solid var(--line); border-radius: 16px; padding: 48px 40px; margin-bottom: 40px;">
+	<div style="max-width: 680px; margin-bottom: 32px;">
+		<p class="eyebrow" style="margin-bottom: 6px;">KATA ALUMNI & TALENTA KAMI</p>
+		<h2 style="font-size: 30px; margin: 0 0 8px; color: var(--ink);">Kisah sukses bermula di sini.</h2>
+		<p style="color: var(--muted); font-size: 14px; margin: 0; line-height: 1.6;">
+			Dengarkan pengalaman para talenta yang telah menemukan langkah karier terbaik bersama mitra penyelenggara resmi.
+		</p>
+	</div>
+
+	<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;">
+		{#each testimonials as item}
+			<div
+				style="background: white; border: 1px solid var(--line); border-radius: 12px; padding: 26px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 4px 12px rgba(0,0,0,0.02);"
+			>
+				<div>
+					<div style="display: flex; gap: 4px; color: #f59e0b; font-size: 14px; margin-bottom: 14px;">
+						{'★'.repeat(item.rating)}
+					</div>
+					<p style="font-size: 13px; color: #334e44; line-height: 1.65; margin: 0 0 20px; font-style: italic;">
+						“{item.quote}”
+					</p>
+				</div>
+
+				<div style="display: flex; align-items: center; gap: 12px; border-top: 1px solid var(--line); padding-top: 14px;">
+					<span
+						style="width: 40px; height: 40px; border-radius: 50%; background: {item.avatarBg}; color: {item.avatarColor}; display: grid; place-items: center; font-weight: 700; font-size: 15px;"
+					>
+						{item.avatar}
+					</span>
+					<div>
+						<strong style="font-size: 13px; color: var(--ink); display: block;">{item.name}</strong>
+						<span style="font-size: 11px; color: var(--muted); display: block;">
+							{item.role} • <span style="color: var(--green);">{item.company}</span>
+						</span>
+					</div>
+				</div>
+			</div>
+		{/each}
+	</div>
+</section>
+
+<!-- ==================== SECTION ENGAGEMENT (MOTTO & JARGON) ==================== -->
+<section
+	style="position: relative; background: linear-gradient(135deg, #153f35 0%, #0d2b24 100%); border-radius: 18px; padding: 56px 48px; color: white; margin-bottom: 40px; overflow: hidden; box-shadow: 0 14px 34px rgba(21,63,53,0.22);"
+>
+	<!-- Decorative Accents -->
+	<div style="position: absolute; top: -40px; right: -40px; width: 260px; height: 260px; background: rgba(198,239,117,0.12); border-radius: 50%; filter: blur(60px); pointer-events: none;"></div>
+	<div style="position: absolute; bottom: -40px; left: -40px; width: 220px; height: 220px; background: rgba(255,255,255,0.05); border-radius: 50%; filter: blur(50px); pointer-events: none;"></div>
+
+	<div style="position: relative; z-index: 2; max-width: 820px;">
+		<span
+			style="display: inline-block; background: rgba(255,255,255,0.12); color: var(--accent); padding: 4px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 16px;"
+		>
+			✦ KOMITMEN KARIER MASA DEPAN
+		</span>
+
+		<!-- Motto / Jargon Utama -->
+		<h2 style="font-size: clamp(2rem, 4vw, 3.2rem); color: white; font-weight: 600; line-height: 1.15; margin-bottom: 16px; letter-spacing: -0.02em;">
+			Membuka Peluang Nyata,<br />
+			<em style="color: var(--accent); font-family: Georgia, serif;">mengantarkan Anda ke potensi terbaik.</em>
+		</h2>
+
+		<p style="color: rgba(255,255,255,0.85); font-size: 16px; line-height: 1.65; max-width: 680px; margin-bottom: 32px;">
+			Jadikan keahlian Anda bernilai di tempat yang tepat. Dapatkan pendampingan fase seleksi, kepastian kontrak yang patuh regulasi, dan fasilitas brankas digital tanpa dipungut biaya perantara.
+		</p>
+
+		<div style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap;">
+			<a
+				class="button"
+				href={resolve('/(public)/layanan')}
+				style="background: var(--accent); color: var(--green); font-weight: 700; font-size: 13px; padding: 12px 24px; border: none;"
+			>
+				Jelajahi Semua Layanan & Posisi ↗
+			</a>
+			{#if !session.user}
+				<a
+					class="button secondary"
+					href={resolve('/(app)/register')}
+					style="background: rgba(255,255,255,0.12); color: white; border: 1px solid rgba(255,255,255,0.3); font-size: 13px; padding: 12px 22px;"
+				>
+					Daftar Akun Gratis Sekarang
+				</a>
+			{/if}
+			<a
+				class="text-link"
+				href={resolve('/(public)/kontak')}
+				style="font-size: 13px; color: var(--accent); font-weight: 600; text-decoration: underline;"
+			>
+				Pusat Konsultasi & Bantuan →
+			</a>
 		</div>
 	</div>
 </section>
 
 <!-- Section Khusus Penyelenggara / Vendor -->
-<section style="background: #edf0e6; border: 1px solid var(--line); border-radius: 16px; padding: 48px 40px; display: flex; justify-content: space-between; align-items: center; gap: 32px; flex-wrap: wrap;">
+<section style="background: #edf0e6; border: 1px solid var(--line); border-radius: 16px; padding: 48px 40px; display: flex; justify-content: space-between; align-items: center; gap: 32px; flex-wrap: wrap; margin-bottom: 60px;">
 	<div style="max-width: 620px;">
 		<span class="eyebrow" style="margin-bottom: 8px; display: inline-block;">KEMITRAAN PENYELENGGARA & VENDOR</span>
 		<h2 style="font-size: 30px; margin: 0 0 12px; color: var(--green);">
 			Butuh tenaga alih daya terverifikasi untuk perusahaan Anda?
 		</h2>
 		<p style="color: #496347; font-size: 15px; margin: 0; line-height: 1.6;">
-			Bergabunglah sebagai mitra penyelenggara resmi Upstream. Kelola lowongan kerja, akses ribuan talenta siap kerja, dan operasikan seleksi pelamar dengan ATS modern berbasis kepatuhan hukum.
+			Bergabunglah sebagai mitra penyelenggara resmi Go Career / Upstream. Kelola lowongan kerja, akses ribuan talenta siap kerja, dan operasikan seleksi pelamar dengan ATS modern berbasis kepatuhan hukum.
 		</p>
 	</div>
 	<div style="display: flex; gap: 14px; flex-wrap: wrap;">

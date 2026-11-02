@@ -115,7 +115,19 @@
 			placeholder="Masukkan password Anda"
 		/>
 
-		{#if login.isError}<p class="notice error" role="alert">{errorMessage(login.error)}</p>{/if}
+		{#if login.isError}
+			<div class="notice error" role="alert">
+				<p style="margin: 0;">{errorMessage(login.error)}</p>
+				{#if errorMessage(login.error).includes('/admin/login')}
+					<a
+						href={resolve('/(app)/admin/login')}
+						style="display: inline-block; margin-top: 6px; font-weight: 700; color: var(--green); text-decoration: underline;"
+					>
+						Buka Halaman Login Staf / Admin ↗
+					</a>
+				{/if}
+			</div>
+		{/if}
 
 		<button class="button full" disabled={login.isPending || session.status === 'initializing'}>
 			{login.isPending

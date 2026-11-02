@@ -9,7 +9,7 @@
 	import JobContent from '#lib/components/JobContent.svelte';
 	import ReviewDecision from '#lib/components/ReviewDecision.svelte';
 	import ReviewHistory from '#lib/components/ReviewHistory.svelte';
-	const session = useSession();
+	const session = useSession('admin');
 	const allowed = $derived(!!session.user?.permissions.includes('job.moderate'));
 	const job = createQuery(() => ({
 		queryKey: ['admin', session.user?.id, 'jobs', 'detail', page.params.id],

@@ -6,10 +6,10 @@
 	<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 36px; flex-wrap: wrap; margin-bottom: 32px;">
 		<div style="max-width: 400px;">
 			<a class="brand" href={resolve('/')} style="font-size: 24px; font-weight: 700; color: var(--green);">
-				upstream.
+				Go Career<span class="brand-dot">.</span>
 			</a>
 			<p style="margin: 10px 0 0; color: var(--muted); font-size: 13px; line-height: 1.6;">
-				Platform alih daya & rekrutmen terverifikasi di Indonesia. Menghubungkan talenta siap kerja dengan mitra penyelenggara kerja terpercaya dengan jaminan zero placement fee.
+				Platform alih daya & penempatan talenta terverifikasi. Menghubungkan talenta siap kerja dengan mitra penyelenggara kerja terpercaya dengan jaminan zero placement fee.
 			</p>
 		</div>
 
@@ -17,13 +17,14 @@
 			<div style="display: flex; flex-direction: column; gap: 9px;">
 				<strong style="color: var(--ink); font-size: 11px; letter-spacing: 0.8px; text-transform: uppercase;">Eksplorasi</strong>
 				<a href={resolve('/')}>Beranda</a>
-				<a href={resolve('/(public)/jobs')}>Lowongan Kerja</a>
+				<a href={resolve('/(public)/layanan')}>Layanan & Program</a>
 				<a href={resolve('/(public)/vendors')}>Mitra Penyelenggara</a>
 			</div>
 			<div style="display: flex; flex-direction: column; gap: 9px;">
 				<strong style="color: var(--ink); font-size: 11px; letter-spacing: 0.8px; text-transform: uppercase;">Pusat Bantuan</strong>
 				<a href={resolve('/(public)/panduan')}>Panduan Pengguna</a>
 				<a href={resolve('/(public)/faq')}>FAQ & Pertanyaan Umum</a>
+				<a href={resolve('/(public)/kontak')}>Hubungi Kami / Kontak</a>
 			</div>
 			<div style="display: flex; flex-direction: column; gap: 9px;">
 				<strong style="color: var(--ink); font-size: 11px; letter-spacing: 0.8px; text-transform: uppercase;">Akses Portal</strong>

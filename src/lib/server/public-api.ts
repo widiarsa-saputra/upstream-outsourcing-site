@@ -31,6 +31,11 @@ export function publicFilters(params: URLSearchParams, kind: 'jobs' | 'vendors')
 		'page',
 		'pageSize',
 		'sort',
+		'type',
+		'category',
+		'organizerType',
+		'degree',
+		'interviewType',
 		...(kind === 'jobs'
 			? [
 					'workMode',

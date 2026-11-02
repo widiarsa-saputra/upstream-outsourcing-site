@@ -3,10 +3,6 @@ import { QueryClient } from '@tanstack/svelte-query';
 import {
 	ApiClient,
 	ApiError,
-	USER_LOGOUT_KEY,
-	USER_TOKEN_KEY,
-	ADMIN_LOGOUT_KEY,
-	ADMIN_TOKEN_KEY,
 	type TokenResponse
 } from '#lib/api/client.ts';
 import type { components } from '../api/schema';
@@ -66,24 +62,60 @@ export class AuthSession {
 		}
 
 		try {
-			const user = await this.queries.fetchQuery({
+			const res = await this.queries.fetchQuery({
 				queryKey: ['auth', 'me', this.scope],
-				queryFn: ({ signal }) => this.api.request<User>('/auth/me', { signal }),
+				queryFn: ({ signal }) => this.api.request<User | { data: User }>('/auth/me', { signal }),
 				staleTime: 0,
 				retry: false
 			});
 			if (epoch === this.epoch) {
+				const rawUser = (res && typeof res === 'object' && 'data' in res && res.data ? res.data : res) as User;
+				const user: User = { ...rawUser };
+				if ((user.role as string) === 'admin') {
+					user.role = 'SUPERADMIN';
+				}
+				if (Array.isArray(user.permissions)) {
+					user.permissions = user.permissions
+						.map((p: unknown) => (typeof p === 'string' ? p : (p as { name?: string }).name || ''))
+						.filter(Boolean);
+				} else {
+					user.permissions = [];
+				}
+
+				if (user.role === 'SUPERADMIN') {
+					const adminPerms = [
+						'admin.overview',
+						'staff.manage',
+						'vendor.verify',
+						'job.moderate',
+						'document.verify',
+						'application.screen',
+						'audit.read'
+					];
+					for (const p of adminPerms) {
+						if (!user.permissions.includes(p)) {
+							user.permissions.push(p);
+						}
+					}
+				}
+
 				const isAdmin = ['SUPERADMIN', 'TALENT_ACQUISITION', 'LEGAL'].includes(user.role);
 				if (this.scope === 'user' && isAdmin) {
 					// Akun admin tidak diizinkan menempati sesi user publik
 					this.api.clear();
 					this.reset();
+					this.status = 'error';
+					this.error =
+						'Akun ini adalah akun Staf/Administrator. Silakan masuk melalui Halaman Login Admin (/admin/login).';
 					return;
 				}
 				if (this.scope === 'admin' && !isAdmin) {
 					// Akun non-admin tidak diizinkan menempati sesi admin
 					this.api.clear();
 					this.reset();
+					this.status = 'error';
+					this.error =
+						'Akses ditolak: Akun Anda bukan akun Staf Internal atau Administrator Upstream.';
 					return;
 				}
 				this.user = user;
@@ -91,7 +123,7 @@ export class AuthSession {
 			}
 		} catch (error) {
 			if (epoch !== this.epoch) return;
-			if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+			if (error instanceof ApiError && (error.status === 401 || error.status === 403 || error.status === 404)) {
 				this.api.clear();
 				this.reset();
 			} else {
@@ -101,17 +133,18 @@ export class AuthSession {
 		}
 	}
 
-	async accept(result: TokenResponse) {
+	async accept(result: TokenResponse & { token?: string }) {
 		this.api.clear();
 		this.reset();
 		this.status = 'initializing';
-		this.api.setToken(result.accessToken);
+		const token = result.accessToken || result.token;
+		if (token) this.api.setToken(token);
 		await this.bootstrap();
 		if (!this.user) throw new Error(this.error || 'Sesi tidak dapat dimuat.');
 	}
 
 	async login(input: { email: string; password: string }) {
-		const result = await this.api.request<TokenResponse>('/auth/login', {
+		const result = await this.api.request<TokenResponse & { token?: string }>('/auth/login', {
 			method: 'POST',
 			body: JSON.stringify(input),
 			anonymous: true

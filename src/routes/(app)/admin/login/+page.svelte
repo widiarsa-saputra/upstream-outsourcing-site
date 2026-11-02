@@ -6,7 +6,7 @@
 	import { useSession, safeDestination } from '#lib/auth/session.svelte.ts';
 	import { errorMessage } from '#lib/api/client.ts';
 
-	const session = useSession();
+	const session = useSession('admin');
 	let email = $state('');
 	let password = $state('');
 	let roleError = $state('');

@@ -8,7 +8,7 @@
 	import LegalDocuments from '#lib/components/LegalDocuments.svelte';
 	import ReviewDecision from '#lib/components/ReviewDecision.svelte';
 	import ReviewHistory from '#lib/components/ReviewHistory.svelte';
-	const session = useSession();
+	const session = useSession('admin');
 	const allowed = $derived(!!session.user?.permissions.includes('vendor.verify'));
 	const vendor = createQuery(() => ({
 		queryKey: ['admin', session.user?.id, 'vendors', 'detail', page.params.id],

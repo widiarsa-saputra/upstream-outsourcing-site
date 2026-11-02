@@ -11,7 +11,7 @@
 		type CandidateDocumentReview
 	} from '#lib/candidate/types.ts';
 
-	const session = useSession();
+	const session = useSession('admin');
 	const queryClient = useQueryClient();
 	const allowed = $derived(!!session.user?.permissions.includes('document.verify'));
 

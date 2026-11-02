@@ -3,7 +3,7 @@
 	import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
 	import { useSession } from '#lib/auth/session.svelte.ts';
 	import { errorMessage } from '#lib/api/client.ts';
-	const session = useSession();
+	const session = useSession('admin');
 	const queries = useQueryClient();
 	let inviteName = $state('');
 	let inviteEmail = $state('');

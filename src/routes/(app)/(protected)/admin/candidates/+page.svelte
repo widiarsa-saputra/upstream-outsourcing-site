@@ -5,7 +5,7 @@
 	import { errorMessage } from '#lib/api/client.ts';
 	import type { CandidatePage } from '#lib/candidate/types.ts';
 
-	const session = useSession();
+	const session = useSession('admin');
 	const allowed = $derived(!!session.user?.permissions.includes('document.verify'));
 
 	let search = $state('');

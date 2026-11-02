@@ -5,13 +5,16 @@
 	import { useSession } from '#lib/auth/session.svelte.ts';
 	import type { LayoutProps } from './$types';
 	let { children }: LayoutProps = $props();
-	const session = useSession();
+	const adminSession = useSession('admin');
+	const userSession = useSession('user');
+	const isStaffArea = $derived(page.url.pathname.startsWith('/admin'));
+	const session = $derived(isStaffArea ? adminSession : userSession);
 	$effect(() => {
 		if (session.status === 'anonymous') {
-			const isStaffArea = page.url.pathname.startsWith('/admin');
 			const targetPath = isStaffArea
 				? resolve('/(app)/admin/login')
 				: resolve('/(app)/login');
+			// eslint-disable-next-line svelte/no-navigation-without-resolve
 			void goto(`${targetPath}?returnTo=${encodeURIComponent(page.url.pathname)}`, {
 				replaceState: true
 			});
